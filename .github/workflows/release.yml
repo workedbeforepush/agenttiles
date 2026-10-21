@@ -6,6 +6,8 @@ name: Release
 on:
   push:
     branches: [main]
+  # Start by hand (Actions → Release → Run workflow), e.g. when GitHub did not deliver a push event.
+  workflow_dispatch:
 
 permissions:
   contents: read
