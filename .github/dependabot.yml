@@ -7,6 +7,11 @@ updates:
     groups:
       dev-dependencies:
         dependency-type: development
+    ignore:
+      # "typescript" is TypeScript 6 on purpose: svelte-check needs it next to TypeScript 7 (@typescript/native).
+      # Lift this once svelte-check supports TypeScript 7 on its own.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
   - package-ecosystem: github-actions
     directory: /
     schedule:
