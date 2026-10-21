@@ -30,6 +30,8 @@ const GIF_FRAME_MS = 110;
 
 // English dates and numbers whatever the machine's locale.
 app.commandLine.appendSwitch('lang', 'en-US');
+// Linux CI runs under a virtual display without a GPU; software rendering keeps captures working there.
+if (process.platform === 'linux') app.disableHardwareAcceleration();
 // Never touch the real ccdash data.
 app.setPath('userData', mkdtempSync(join(tmpdir(), 'ccdash-screenshots-')));
 

@@ -1,6 +1,6 @@
 // Runs the macOS / Linux helpers against the real system (CI runs these on macOS and Linux runners).
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -15,14 +15,19 @@ describe.skipIf(process.platform === 'win32')('unix helpers on this machine', ()
     expect(chain.length).toBeGreaterThan(1);
   });
 
-  it('takes the PATH of the login shell', async () => {
-    const before = process.env['PATH'];
-    process.env['PATH'] = '/nonexistent';
+  it('takes the PATH that the login shell profile sets up', async () => {
+    // Like Homebrew or nvm: the user's profile adds a directory that a Dock or launcher start would not see.
+    const home = mkdtempSync(join(tmpdir(), 'ccdash-home-'));
+    writeFileSync(join(home, '.bash_profile'), 'export PATH="/ccdash-test/bin:$PATH"
+');
+    const saved = { PATH: process.env['PATH'], HOME: process.env['HOME'], SHELL: process.env['SHELL'] };
+    Object.assign(process.env, { PATH: '/usr/bin:/bin', HOME: home, SHELL: '/bin/bash' });
     try {
       await adoptLoginShellPath();
-      expect(process.env['PATH']?.split(':')).toContain('/usr/bin');
+      expect(process.env['PATH']?.split(':')).toEqual(expect.arrayContaining(['/ccdash-test/bin', '/usr/bin', '/bin']));
     } finally {
-      process.env['PATH'] = before;
+      Object.assign(process.env, saved);
+      rmSync(home, { recursive: true, force: true });
     }
   });
 });
