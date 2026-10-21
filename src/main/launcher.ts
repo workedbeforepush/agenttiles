@@ -97,7 +97,7 @@ export async function launchSession(cwd: string, sessionId: string | null): Prom
   if (sessionId !== null && !SESSION_ID.test(sessionId)) throw new Error('Invalid session id.');
   const command = sessionId ? ['claude', '--resume', sessionId] : ['claude'];
   const result = await openTerminal(cwd, command, cleanEnv());
-  if (result === 'unsupported') throw new Error('Starting sessions is supported on Windows (Windows Terminal) only.');
-  if (result === 'failed') throw new Error('Windows Terminal (wt.exe) could not be started.');
+  if (result === 'unsupported') throw new Error('Starting sessions is not supported on this OS.');
+  if (result === 'failed') throw new Error('No terminal could be started (Windows Terminal, iTerm2 / Terminal.app, or a Linux terminal).');
   log.info(`launched ${command.join(' ')} in ${cwd}`);
 }

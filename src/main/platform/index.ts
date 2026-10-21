@@ -1,14 +1,25 @@
-// Platform dispatch. Windows is fully supported; macOS and Linux get liveness only.
+// Platform dispatch: Windows (Win32 + Windows Terminal), macOS (Terminal.app / iTerm2) and Linux (X11 + xdotool).
 import { log } from '../log';
 
 type WindowsModule = typeof import('./windows');
+type MacModule = typeof import('./mac');
+type LinuxModule = typeof import('./linux');
 
 let win: WindowsModule | null = null;
+let mac: MacModule | null = null;
+let linux: LinuxModule | null = null;
 /** One UI Automation tab switch at a time; repeated clicks must not pile up PowerShell processes. */
 let selectingTab = false;
 
 export async function initPlatform(): Promise<void> {
-  if (process.platform === 'win32') win = await import('./windows');
+  if (process.platform === 'win32') {
+    win = await import('./windows');
+    return;
+  }
+  // Before anything looks for node or claude: apps started from Finder or a launcher lack the shell's PATH.
+  await (await import('./unix')).adoptLoginShellPath();
+  if (process.platform === 'darwin') mac = await import('./mac');
+  else if (process.platform === 'linux') linux = await import('./linux');
 }
 
 function pidExists(pid: number): boolean {
@@ -33,9 +44,16 @@ export function isAlive(pid: number, procStart: string | null): boolean {
   return pidExists(pid);
 }
 
-/** PIDs of all running claude.exe processes, or null where the process table is not supported. */
-export function claudeProcesses(): number[] | null {
-  return win ? win.claudeProcessIds() : null;
+/** PIDs of all running claude processes, or null where the process table is not supported. */
+export async function claudeProcesses(): Promise<number[] | null> {
+  if (win) return win.claudeProcessIds();
+  if (mac || linux) return (await import('./unix')).claudeProcessIds().catch(() => null);
+  return null;
+}
+
+/** Starts ccdash with the user session (Linux; Windows and macOS use Electron's login items). */
+export function setLinuxAutostart(enabled: boolean, exec: string[]): void {
+  linux?.setAutostart(enabled, exec);
 }
 
 /** Windows: registers the toast sender identity (name and icon) for the app id. */
@@ -48,13 +66,21 @@ export function registerAppIdentity(appId: string, displayName: string, iconPath
   }
 }
 
-/** Opens a terminal tab running a command in `cwd`; 'unsupported' outside Windows. */
+/**
+ * Opens a terminal running a command in `cwd`: a Windows Terminal tab, an iTerm2 / Terminal.app tab, or a window
+ * of the first installed Linux terminal.
+ */
 export async function openTerminal(cwd: string, command: string[], env: NodeJS.ProcessEnv): Promise<'opened' | 'failed' | 'unsupported'> {
-  if (!win) return 'unsupported';
-  return (await win.openTerminalTab(cwd, command, env)) ? 'opened' : 'failed';
+  let opened: boolean;
+  if (win) opened = await win.openTerminalTab(cwd, command, env);
+  else if (mac) opened = await mac.openTerminalTab(cwd, command);
+  else if (linux) opened = await linux.openTerminalTab(cwd, command, env);
+  else return 'unsupported';
+  return opened ? 'opened' : 'failed';
 }
 
-export type FocusResult = 'focused' | 'minimized' | 'notFound' | 'unsupported';
+/** 'noX11' / 'noXdotool': Linux focus needs an X11 display and xdotool. */
+export type FocusResult = 'focused' | 'minimized' | 'notFound' | 'unsupported' | 'noX11' | 'noXdotool';
 
 /** The session and window ccdash brought to front last; a second click on that tile sends the window away again. */
 let lastFocus: { sessionId: string; hwnd: string } | null = null;
@@ -64,6 +90,8 @@ let lastFocus: { sessionId: string; hwnd: string } | null = null;
  * minimizes it when ccdash showed exactly this session last and the window is still frontmost on its monitor.
  */
 export async function focusSession(sessionId: string, pid: number, titles: string[]): Promise<FocusResult> {
+  if (mac) return mac.focusSession(pid);
+  if (linux) return linux.focusSession(pid, titles);
   if (!win) return 'unsupported';
   const host = win.findHostWindows(pid);
   if (!host) return 'notFound';

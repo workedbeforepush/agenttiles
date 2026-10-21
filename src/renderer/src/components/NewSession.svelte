@@ -84,7 +84,10 @@
         </button>
       {/each}
     </div>
-    <p class="hint">Opens a new Windows Terminal tab with <code>claude</code> (or <code>claude --resume</code>).</p>
+    <p class="hint">
+      Opens <code>claude</code> (or <code>claude --resume</code>) in a new terminal tab: Windows Terminal, iTerm2 or
+      Terminal.app, or your Linux terminal.
+    </p>
   </div>
 </div>
 
