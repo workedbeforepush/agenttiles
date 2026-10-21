@@ -36,6 +36,20 @@ app.setPath('userData', mkdtempSync(join(tmpdir(), 'ccdash-screenshots-')));
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 let progress: DemoProgress = { approved: false, answered: false };
+/** The page zoom in effect: SCALE, or less when the screen caps the window size (small CI runner screens). */
+let zoom = SCALE;
+
+/**
+ * Sizes the window for a `width` x `height` CSS layout at `scale` and zooms the page to match. Windows caps
+ * windows at the screen size, so the zoom follows the size the window really got: the layout stays the same.
+ */
+function fit(width: number, height: number, scale: number): void {
+  win.setContentSize(Math.round(width * scale), Math.round(height * scale));
+  const [w, h] = win.getContentSize() as [number, number];
+  zoom = Math.min(w / width, h / height);
+  win.webContents.setZoomFactor(zoom);
+  if (zoom < scale) console.log(`window capped at ${w}x${h}: zoom ${zoom.toFixed(2)} instead of ${scale}`);
+}
 let settings: SettingsView = settingsView();
 let win: BrowserWindow;
 
@@ -83,7 +97,7 @@ const js = <T>(code: string): Promise<T> => win.webContents.executeJavaScript(co
 const CONTENT_BOTTOM = `Math.ceil(Math.max(...[...document.querySelectorAll('.tile, .dialog, .panel')].map((e) => e.getBoundingClientRect().bottom)) + 24)`;
 
 /** The top `height` CSS pixels of a capture (captures with a rectangle fail with UnknownVizError on this setup). */
-function cropTo(image: NativeImage, height: number, scale = SCALE): NativeImage {
+function cropTo(image: NativeImage, height: number, scale = zoom): NativeImage {
   const size = image.getSize();
   return image.crop({ x: 0, y: 0, width: size.width, height: Math.min(size.height, Math.round(height * scale)) });
 }
@@ -97,9 +111,19 @@ async function capture(name: string): Promise<NativeImage> {
   return image;
 }
 
+/** Polls until `check` (a JavaScript expression run in the page) is truthy; fails after 5 s (slow CI runners). */
+async function waitFor(check: string, what: string): Promise<void> {
+  const end = Date.now() + 5000;
+  while (!(await js<boolean>(`!!(${check})`))) {
+    if (Date.now() > end) throw new Error(`timed out waiting for ${what}`);
+    await sleep(100);
+  }
+}
+
 async function click(selector: string): Promise<void> {
-  const ok = await js<boolean>(`(() => { const el = document.querySelector(${JSON.stringify(selector)}); el?.click(); return !!el; })()`);
-  if (!ok) throw new Error(`nothing to click: ${selector}`);
+  const query = `document.querySelector(${JSON.stringify(selector)})`;
+  await waitFor(query, selector);
+  await js(`${query}.click()`);
   await sleep(300);
 }
 
@@ -107,9 +131,7 @@ async function click(selector: string): Promise<void> {
 async function escape(): Promise<void> {
   win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' });
   win.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' });
-  await sleep(300);
-  const open = await js<string | null>(`document.querySelector('.backdrop')?.innerText.slice(0, 40) ?? null`);
-  if (open !== null) throw new Error(`Esc did not close the dialog: ${open}`);
+  await waitFor(`!document.querySelector('.backdrop')`, 'Esc to close the dialog');
 }
 
 // ---- animated GIF -------------------------------------------------------------------------------------
@@ -159,7 +181,7 @@ class Recorder {
   }
 
   async frame(hold = 0): Promise<void> {
-    const image = cropTo(await win.webContents.capturePage(), this.height, GIF_SCALE);
+    const image = cropTo(await win.webContents.capturePage(), this.height);
     const { width, height } = image.getSize();
     const bgra = image.toBitmap();
     const rgba = new Uint8Array(bgra.length);
@@ -198,8 +220,7 @@ class Recorder {
 
 async function animation(): Promise<void> {
   progress = { approved: false, answered: false };
-  win.setContentSize(GIF_WIDTH * GIF_SCALE, GIF_HEIGHT * GIF_SCALE);
-  win.webContents.setZoomFactor(GIF_SCALE);
+  fit(GIF_WIDTH, GIF_HEIGHT, GIF_SCALE);
   push();
   await sleep(1000);
   // Full window height: the question dialog in the second half of the story reaches below the first tile row.
@@ -288,7 +309,7 @@ async function run(): Promise<void> {
     webPreferences: { preload: join(ROOT, 'out', 'preload', 'index.js'), sandbox: true, contextIsolation: true, offscreen: true },
   });
   await win.loadFile(join(ROOT, 'out', 'renderer', 'index.html'));
-  win.webContents.setZoomFactor(SCALE);
+  fit(WIDTH, HEIGHT, SCALE);
   await sleep(1500);
 
   const dashboard = await capture('dashboard.png');
