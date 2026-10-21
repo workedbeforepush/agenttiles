@@ -1,0 +1,112 @@
+:root {
+  color-scheme: dark;
+  --bg: #15171c;
+  --surface: #1e2128;
+  --surface-2: #262a33;
+  --border: #2e333d;
+  --text: #e6e8ee;
+  --muted: #8b93a7;
+  --accent: #4c8dff;
+  --claude: #d97757;
+  --shadow: 0 8px 24px rgb(0 0 0 / 0.45);
+
+  --st-working: #4c8dff;
+  --st-needsApproval: #ffb020;
+  --st-needsInput: #22c3d6;
+  --st-done: #2fbf71;
+  --st-idle: #6b7280;
+  --st-error: #ef4444;
+  --st-limitHit: #f97316;
+  --st-compacting: #a78bfa;
+  --st-shell: #64748b;
+  --st-unknown: #d946ef;
+
+  --mono: 'Cascadia Code', 'JetBrains Mono', Consolas, ui-monospace, monospace;
+  --sans: 'Segoe UI Variable', 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --bg: #f3f4f7;
+    --surface: #ffffff;
+    --surface-2: #eef0f4;
+    --border: #d9dde5;
+    --text: #1b1f27;
+    --muted: #5d6678;
+    --accent: #2563eb;
+    --shadow: 0 8px 24px rgb(15 23 42 / 0.15);
+
+    --st-working: #2563eb;
+    --st-needsApproval: #d97706;
+    --st-needsInput: #0891b2;
+    --st-done: #16a34a;
+    --st-idle: #6b7280;
+    --st-error: #dc2626;
+    --st-limitHit: #ea580c;
+    --st-compacting: #7c3aed;
+    --st-shell: #475569;
+    --st-unknown: #c026d3;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
+  user-select: none;
+}
+
+#app {
+  height: 100%;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+input,
+select {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+/* Reduce motion: from the ccdash setting or the OS preference. */
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 5px;
+}

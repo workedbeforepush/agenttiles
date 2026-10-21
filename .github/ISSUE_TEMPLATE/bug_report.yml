@@ -1,0 +1,61 @@
+name: Bug report
+description: Something in ccdash does not work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Security problems please via [SECURITY.md](https://github.com/workedbeforepush/ccdash/blob/main/SECURITY.md), not here.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Start two Claude Code sessions in Windows Terminal
+        2. ...
+  - type: input
+    id: version
+    attributes:
+      label: ccdash version or commit
+      placeholder: 0.1.0 / a1b2c3d
+    validations:
+      required: true
+  - type: input
+    id: claude
+    attributes:
+      label: Claude Code version
+      description: Output of `claude --version`
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [Windows 11, Windows 10, macOS, Linux]
+    validations:
+      required: true
+  - type: input
+    id: terminal
+    attributes:
+      label: Terminal / IDE
+      placeholder: Windows Terminal, VS Code, JetBrains, iTerm2, ...
+  - type: checkboxes
+    id: integration
+    attributes:
+      label: Integration
+      options:
+        - label: Hooks are installed (Settings → Claude Code integration)
+        - label: Statusline wrapper is installed
+  - type: textarea
+    id: logs
+    attributes:
+      label: Diagnostics and log
+      description: Relevant lines from the Diagnostics panel and `ccdash.log` (in `%APPDATA%\ccdash` on Windows). Remove project names or paths you don't want to share.
+      render: text

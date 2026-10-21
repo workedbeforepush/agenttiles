@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/workedbeforepush/ccdash/discussions
+    about: Ask questions and discuss ideas with others.
+  - name: Security vulnerability
+    url: https://github.com/workedbeforepush/ccdash/security/advisories/new
+    about: Report security problems privately.
