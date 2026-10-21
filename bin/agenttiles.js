@@ -2,7 +2,6 @@
 // The `agenttiles` command of the npm package: starts the app in Electron, detached from the terminal.
 const { spawn } = require('node:child_process');
 const { join } = require('node:path');
-const electron = require('electron'); // path of the Electron binary the electron package downloaded
 const { version } = require('../package.json');
 
 const HELP = `AgentTiles ${version}: every running Claude Code session on one screen.
@@ -24,6 +23,8 @@ if (args.includes('--version') || args.includes('-v')) {
   process.exit(0);
 }
 
+// Loaded only to start: the first require downloads the Electron binary (and says so on stdout).
+const electron = require('electron'); // path of the Electron binary
 const app = join(__dirname, '..');
 // Chromium's sandbox helper needs root (SUID) on many distributions, which an npm install cannot set up.
 // AgentTiles only shows its own local files under a strict content security policy.
