@@ -86,8 +86,8 @@ npm install -g agenttiles
 agenttiles
 ```
 
-The `agenttiles` command starts the app and returns right away; the terminal can be closed. Run it again to bring
-the window to the front. AgentTiles checks npm for new versions and offers **Update and restart** in its header.
+The `agenttiles` command starts the app and returns right away; the terminal can be closed. The very first start
+downloads Electron (about 100 MB) and takes a little longer. Run it again to bring the window to the front. AgentTiles checks npm for new versions and offers **Update and restart** in its header.
 
 On first start, AgentTiles asks whether to install its **hooks** and the **statusline wrapper** in
 `~/.claude/settings.json`:
