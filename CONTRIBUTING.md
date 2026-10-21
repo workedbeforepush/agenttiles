@@ -60,17 +60,29 @@ npm run typecheck
 npm test
 ```
 
+## Pull request titles
+
+Pull requests are squash-merged, so the title becomes the commit on `main`, and the version number and the
+changelog are generated from it. Titles follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+| Title | Effect |
+|---|---|
+| `feat: start sessions in tmux` | new feature, listed in the changelog, next minor version |
+| `fix: focus the right tab across terminal windows` | bug fix, listed in the changelog, next patch version |
+| `feat!: …` or a `BREAKING CHANGE:` footer | breaking change (minor version while AgentTiles is below 1.0) |
+| `docs:`, `refactor:`, `test:`, `build:`, `ci:`, `chore:` | no release on their own, not listed |
+
+Write the part after the prefix in imperative mood, describing what the change does for users. The "PR title"
+check fails until the title fits.
+
 ## Releasing (maintainers)
 
-1. Move the `[Unreleased]` entries in `CHANGELOG.md` under a new `## [x.y.z] - YYYY-MM-DD` heading and commit.
-2. `npm version x.y.z` (sets `package.json`, commits, tags `vx.y.z`), then `git push --follow-tags`.
-3. The `Release` workflow checks that the tag matches `package.json`, runs the checks, publishes to npm with
-   provenance (trusted publishing, no token) and creates the GitHub release from the changelog section.
+Nothing to do by hand:
 
-## Commit messages
-
-Imperative mood, describing what the change does: "Add stats panel", "Fix focus jump across terminal windows".
-A short body explains the why when it isn't obvious.
+1. After each merge to `main`, release-please updates the pull request `chore(main): release x.y.z` with the
+   next version and the changelog.
+2. Merging that pull request tags `vx.y.z`, creates the GitHub release, and the `Release` workflow publishes the
+   package to npm with provenance (trusted publishing, no token).
 
 ## License
 
