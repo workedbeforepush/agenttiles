@@ -107,7 +107,7 @@ describe('protocol', () => {
 
 describe('paths and tools', () => {
   it('builds the project slug Claude Code uses', () => {
-    expect(projectSlug('C:\\_Git\\Personal\\ccdash')).toBe('C---Git-Personal-ccdash');
+    expect(projectSlug('C:\\_Git\\Personal\\agenttiles')).toBe('C---Git-Personal-agenttiles');
     expect(projectSlug('C:\\src\\acme\\Acme.Web.Api')).toBe('C--src-acme-Acme-Web-Api');
   });
 

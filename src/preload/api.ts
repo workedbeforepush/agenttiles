@@ -1,4 +1,4 @@
-// Type of the API the preload script exposes to the renderer as window.ccdash. Type-only module.
+// Type of the API the preload script exposes to the renderer as window.agenttiles. Type-only module.
 import type {
   DecisionRequest,
   DoctorReport,
@@ -10,7 +10,7 @@ import type {
   TileAction,
 } from '../core/types';
 
-export interface CcdashApi {
+export interface AgentTilesApi {
   getSnapshot(): Promise<Snapshot>;
   onSnapshot(listener: (snapshot: Snapshot) => void): void;
   onOpenSettings(listener: () => void): void;

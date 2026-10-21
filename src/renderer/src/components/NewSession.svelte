@@ -26,7 +26,7 @@
     busy = true;
     error = null;
     try {
-      error = await window.ccdash.launchSession(cwd, sessionId);
+      error = await window.agenttiles.launchSession(cwd, sessionId);
       if (error === null) onClose();
     } catch (e) {
       error = (e as Error).message;
@@ -36,12 +36,12 @@
   }
 
   async function chooseFolder(): Promise<void> {
-    const folder = await window.ccdash.pickFolder();
+    const folder = await window.agenttiles.pickFolder();
     if (folder) await launch(folder, null);
   }
 
   onMount(() => {
-    window.ccdash
+    window.agenttiles
       .recentSessions()
       .then((result) => (view = result))
       .catch((e: unknown) => (error = (e as Error).message));

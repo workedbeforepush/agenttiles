@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Questions and ideas
-    url: https://github.com/workedbeforepush/ccdash/discussions
+    url: https://github.com/workedbeforepush/agenttiles/discussions
     about: Ask questions and discuss ideas with others.
   - name: Security vulnerability
-    url: https://github.com/workedbeforepush/ccdash/security/advisories/new
+    url: https://github.com/workedbeforepush/agenttiles/security/advisories/new
     about: Report security problems privately.

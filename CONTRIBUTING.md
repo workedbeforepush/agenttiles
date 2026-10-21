@@ -1,11 +1,11 @@
-# Contributing to ccdash
+# Contributing to AgentTiles
 
 Thanks for helping. Bug reports, ideas and pull requests are all welcome.
 
 ## Before you start
 
-- **Bugs:** open an [issue](https://github.com/workedbeforepush/ccdash/issues/new/choose) with the bug template.
-  The Diagnostics panel (the pulse icon in the header) and the log in ccdash's data folder (`%APPDATA%\ccdash\ccdash.log`
+- **Bugs:** open an [issue](https://github.com/workedbeforepush/agenttiles/issues/new/choose) with the bug template.
+  The Diagnostics panel (the pulse icon in the header) and the log in AgentTiles's data folder (`%APPDATA%\agenttiles\agenttiles.log`
   on Windows) usually show what went wrong. Remove project names or paths you don't want to share.
 - **Features:** open an issue or a discussion first for anything bigger than a small fix, so we can agree on the
   approach before you spend time on it.
@@ -16,13 +16,13 @@ Thanks for helping. Bug reports, ideas and pull requests are all welcome.
 Requirements: Node.js 22 or later, and Claude Code for trying things out.
 
 ```sh
-git clone https://github.com/workedbeforepush/ccdash.git
-cd ccdash
+git clone https://github.com/workedbeforepush/agenttiles.git
+cd agenttiles
 npm install
 npm run dev
 ```
 
-ccdash combines four data sources: Claude Code's session registry (`~/.claude/sessions`), the transcripts, the
+AgentTiles combines four data sources: Claude Code's session registry (`~/.claude/sessions`), the transcripts, the
 optional command hooks and the optional statusline wrapper. `src/core/session.ts` merges them into one state per
 session; `src/main/store.ts` feeds it; the README section "How it works" gives the overview.
 
@@ -31,9 +31,9 @@ session; `src/main/store.ts` feeds it; the README section "How it works" gives t
 ```
 src/
   core/       pure logic shared by main, hook and renderer (state model, parsing, diff); no Electron imports
-  hook/       ccdash-hook.js, the command hook and statusline wrapper Claude Code runs
+  hook/       agenttiles-hook.js, the command hook and statusline wrapper Claude Code runs
   main/       Electron main process: IPC server, session store, tray, toasts, focus jump, settings
-  preload/    the API the renderer gets as window.ccdash
+  preload/    the API the renderer gets as window.agenttiles
   renderer/   Svelte 5 UI
 test/         vitest tests
 scripts/      build helpers and the screenshot generator
@@ -43,7 +43,7 @@ scripts/      build helpers and the screenshot generator
 
 - **Small, focused changes.** One topic per pull request.
 - **Keep it simple.** One clear way to do a thing; no speculative options or fallbacks.
-- **Fail open towards Claude Code.** Nothing ccdash does may block or break a Claude Code session. If ccdash is
+- **Fail open towards Claude Code.** Nothing AgentTiles does may block or break a Claude Code session. If AgentTiles is
   gone or confused, the hook steps aside and the terminal asks as usual.
 - **Respect privacy.** Everything stays local. Never read credential files (for example the `.key` files in
   `~/.claude/sessions`).

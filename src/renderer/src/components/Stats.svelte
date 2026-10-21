@@ -18,7 +18,7 @@
   async function load(days: 7 | 30): Promise<void> {
     failed = false;
     try {
-      const result = await window.ccdash.getStats(days);
+      const result = await window.agenttiles.getStats(days);
       // A slower answer for a range the user already left must not overwrite the current one.
       if (range === days) stats = result;
     } catch {
@@ -172,7 +172,7 @@
         <p class="hint">No activity in this range yet.</p>
       {/if}
       {#if before}
-        <p class="hint">ccdash records stats while it runs; data starts on {label(before)}</p>
+        <p class="hint">AgentTiles records stats while it runs; data starts on {label(before)}</p>
       {/if}
     {/if}
   </div>

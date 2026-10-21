@@ -24,7 +24,7 @@
   async function refreshLimits(): Promise<void> {
     refreshingLimits = true;
     try {
-      await window.ccdash.refreshLimits();
+      await window.agenttiles.refreshLimits();
     } finally {
       refreshingLimits = false;
     }
@@ -72,7 +72,7 @@
   let showDoctor = $state(false);
   let showToday = $state(false);
   let showNewSession = $state(false);
-  /** Header counters as filters; empty shows every tile. Not saved: ccdash always starts unfiltered. */
+  /** Header counters as filters; empty shows every tile. Not saved: AgentTiles always starts unfiltered. */
   let filters = $state<StatusFilter[]>([]);
   let installing = $state(false);
   let fullscreen = $state(false);
@@ -157,7 +157,7 @@
   }
 
   async function refreshSettings(): Promise<void> {
-    settingsView = await window.ccdash.getSettings();
+    settingsView = await window.agenttiles.getSettings();
   }
 
   async function openSettings(): Promise<void> {
@@ -166,17 +166,17 @@
   }
 
   async function setViewMode(mode: ViewMode): Promise<void> {
-    settingsView = await window.ccdash.updateSettings({ viewMode: mode });
+    settingsView = await window.agenttiles.updateSettings({ viewMode: mode });
   }
 
   async function finishFirstRun(install: boolean): Promise<void> {
     installing = true;
     try {
       if (install) {
-        await window.ccdash.setHooks(true);
-        await window.ccdash.setStatusline(true);
+        await window.agenttiles.setHooks(true);
+        await window.agenttiles.setStatusline(true);
       }
-      settingsView = await window.ccdash.finishFirstRun();
+      settingsView = await window.agenttiles.finishFirstRun();
       if (settingsView.integration.error) showSettings = true;
     } finally {
       installing = false;
@@ -218,7 +218,7 @@
     // Full screen works everywhere, also in a text field or with an overlay open; not while a shortcut is recorded.
     if (action === 'fullscreen' && !target?.classList.contains('recorder')) {
       event.preventDefault();
-      void window.ccdash.toggleFullscreen();
+      void window.agenttiles.toggleFullscreen();
       return;
     }
     if (target && ['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName)) return;
@@ -232,7 +232,7 @@
     event.preventDefault();
     if (action === 'escape') {
       if (selectedId) selectedId = null;
-      else if (fullscreen) void window.ccdash.toggleFullscreen();
+      else if (fullscreen) void window.agenttiles.toggleFullscreen();
       return;
     }
     if (action === 'nextPage' || action === 'prevPage') {
@@ -245,10 +245,10 @@
     if (action === 'jump' && selectedTile && reviewable(selectedTile)) {
       openAnswer(selectedTile.sessionId);
     } else if (action === 'jump' && selectedId) {
-      void window.ccdash.tileAction(selectedId, 'focus');
+      void window.agenttiles.tileAction(selectedId, 'focus');
     } else if (action === 'deny') {
       const tile = permissionTarget();
-      if (tile?.pending) void window.ccdash.decidePermission(tile.pending.id, { decision: 'deny' });
+      if (tile?.pending) void window.agenttiles.decidePermission(tile.pending.id, { decision: 'deny' });
     }
   }
 
@@ -258,22 +258,22 @@
     if (!source || source === targetId) return;
     const ids = snapshot.tiles.map((t) => t.sessionId).filter((id) => id !== source);
     ids.splice(ids.indexOf(targetId), 0, source);
-    void window.ccdash.setOrder(ids);
+    void window.agenttiles.setOrder(ids);
   }
 
   onMount(() => {
     // No expression body: returning the reactive proxy would make contextBridge try (and fail) to clone it back.
-    window.ccdash.onSnapshot((next) => {
+    window.agenttiles.onSnapshot((next) => {
       snapshot = next;
     });
-    window.ccdash.onOpenSettings(() => void openSettings());
-    window.ccdash.onSettingsChanged(() => {
+    window.agenttiles.onOpenSettings(() => void openSettings());
+    window.agenttiles.onSettingsChanged(() => {
       if (showSettings) void refreshSettings();
     });
-    window.ccdash.onFullscreen((value) => (fullscreen = value));
-    window.ccdash.onTransitions(onTransitions);
-    void window.ccdash.isFullscreen().then((value) => (fullscreen = value));
-    void window.ccdash.getSnapshot().then((initial) => (snapshot = initial));
+    window.agenttiles.onFullscreen((value) => (fullscreen = value));
+    window.agenttiles.onTransitions(onTransitions);
+    void window.agenttiles.isFullscreen().then((value) => (fullscreen = value));
+    void window.agenttiles.getSnapshot().then((initial) => (snapshot = initial));
     void refreshSettings();
     const timer = setInterval(() => (now = Date.now()), 1000);
     return () => clearInterval(timer);
@@ -293,12 +293,12 @@
 
   $effect(() => {
     const count = snapshot.header.waiting;
-    const tooltip = `ccdash · ${snapshot.header.working} working · ${count} waiting · ${snapshot.header.done} done`;
+    const tooltip = `AgentTiles · ${snapshot.header.working} working · ${count} waiting · ${snapshot.header.done} done`;
     if (tooltip === lastTray) return;
     lastTray = tooltip;
-    void window.ccdash.iconPixelSize().then(async (size) => {
+    void window.agenttiles.iconPixelSize().then(async (size) => {
       const icon = await paintTrayIcon(count, size);
-      window.ccdash.setStatusIcons(icon, tooltip, paintTaskbarBadge(count, size), count);
+      window.agenttiles.setStatusIcons(icon, tooltip, paintTaskbarBadge(count, size), count);
     });
   });
 </script>
@@ -317,10 +317,10 @@
     {filters}
     onFilter={toggleFilter}
     {grouped}
-    onGroup={() => void window.ccdash.updateSettings({ groupByProject: !grouped }).then((v) => (settingsView = v))}
+    onGroup={() => void window.agenttiles.updateSettings({ groupByProject: !grouped }).then((v) => (settingsView = v))}
     onNewSession={() => (showNewSession = true)}
     onViewMode={(mode) => void setViewMode(mode)}
-    onFullscreen={() => void window.ccdash.toggleFullscreen()}
+    onFullscreen={() => void window.agenttiles.toggleFullscreen()}
     onRefreshLimits={() => void refreshLimits()}
     {refreshingLimits}
   />
@@ -440,9 +440,9 @@
 {#if settingsView?.firstRun}
   <div class="modal-backdrop">
     <div class="modal">
-      <h2>Connect ccdash to Claude Code</h2>
+      <h2>Connect AgentTiles to Claude Code</h2>
       <p>
-        ccdash already shows every running session. Installing its hooks and statusline wrapper in
+        AgentTiles already shows every running session. Installing its hooks and statusline wrapper in
         <code>~/.claude/settings.json</code> adds live tool activity, Allow / Deny on tiles, cost, context and rate
         limits.
       </p>

@@ -1,11 +1,11 @@
 name: Bug report
-description: Something in ccdash does not work as expected
+description: Something in AgentTiles does not work as expected
 labels: [bug]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for reporting! Security problems please via [SECURITY.md](https://github.com/workedbeforepush/ccdash/blob/main/SECURITY.md), not here.
+        Thanks for reporting! Security problems please via [SECURITY.md](https://github.com/workedbeforepush/agenttiles/blob/main/SECURITY.md), not here.
   - type: textarea
     id: what
     attributes:
@@ -23,7 +23,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: ccdash version or commit
+      label: AgentTiles version or commit
       placeholder: 0.1.0 / a1b2c3d
     validations:
       required: true
@@ -57,5 +57,5 @@ body:
     id: logs
     attributes:
       label: Diagnostics and log
-      description: Relevant lines from the Diagnostics panel and `ccdash.log` (in `%APPDATA%\ccdash` on Windows). Remove project names or paths you don't want to share.
+      description: Relevant lines from the Diagnostics panel and `agenttiles.log` (in `%APPDATA%\agenttiles` on Windows). Remove project names or paths you don't want to share.
       render: text

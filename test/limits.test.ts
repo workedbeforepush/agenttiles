@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { LimitsCache } from '../src/main/limits';
 
-const dir = mkdtempSync(join(tmpdir(), 'ccdash-limits-'));
+const dir = mkdtempSync(join(tmpdir(), 'agenttiles-limits-'));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 describe('LimitsCache', () => {

@@ -224,7 +224,7 @@ export function minimize(hwnd: Hwnd): void {
 
 /**
  * True when the window is not minimized and no other visible top-level window lies above it on its monitor, ignoring
- * windows of `ignorePid` (ccdash itself, which takes the focus when its tile is clicked).
+ * windows of `ignorePid` (AgentTiles itself, which takes the focus when its tile is clicked).
  */
 export function isFrontmost(hwnd: Hwnd, ignorePid: number): boolean {
   if (IsIconic(hwnd) || !IsWindowVisible(hwnd)) return false;
@@ -251,8 +251,8 @@ export function hwndValue(hwnd: Hwnd): string {
 const SELECT_TAB_SCRIPT = `
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
-$titles = $env:CCDASH_TITLES | ConvertFrom-Json
-$hwnds = $env:CCDASH_HWNDS | ConvertFrom-Json
+$titles = $env:AGENTTILES_TITLES | ConvertFrom-Json
+$hwnds = $env:AGENTTILES_HWNDS | ConvertFrom-Json
 $cond = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::TabItem)
 foreach ($h in $hwnds) {
   $window = [System.Windows.Automation.AutomationElement]::FromHandle([IntPtr][long]$h)
@@ -301,7 +301,7 @@ export function selectTerminalTab(hwnds: Hwnd[], titles: string[]): Promise<Hwnd
   return new Promise((resolve) => {
     const child = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded], {
       windowsHide: true,
-      env: { ...process.env, CCDASH_HWNDS: JSON.stringify(values), CCDASH_TITLES: JSON.stringify(titles) },
+      env: { ...process.env, AGENTTILES_HWNDS: JSON.stringify(values), AGENTTILES_TITLES: JSON.stringify(titles) },
       stdio: ['ignore', 'pipe', 'ignore'],
     });
     let stdout = '';

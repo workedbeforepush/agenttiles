@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Integration } from '../src/main/integration';
 
-const root = mkdtempSync(join(tmpdir(), 'ccdash-int-'));
+const root = mkdtempSync(join(tmpdir(), 'agenttiles-int-'));
 const claudeDir = join(root, 'claude');
 const userData = join(root, 'userData');
 const bundledHook = join(root, 'bundled-hook.js');
@@ -48,7 +48,7 @@ describe('Integration', () => {
     expect(status.hooksInstalled).toBe(true);
     expect(status.statuslineInstalled).toBe(true);
     expect(status.nodePath).toMatch(/node(\.exe)?$/i);
-    expect(readFileSync(join(userData, 'ccdash-hook.js'), 'utf8')).toBe('// hook v1');
+    expect(readFileSync(join(userData, 'agenttiles-hook.js'), 'utf8')).toBe('// hook v1');
     expect(JSON.parse(readFileSync(join(userData, 'statusline-chain.json'), 'utf8'))).toEqual(original.statusLine);
     expect(settings()['model']).toBe('opus');
   });
@@ -63,7 +63,7 @@ describe('Integration', () => {
     const current = settings();
     writeFileSync(
       settingsPath,
-      JSON.stringify({ ...current, statusLine: { type: 'command', command: '"C:/old/node.exe" "C:/old/ccdash-hook.js" statusline' } }),
+      JSON.stringify({ ...current, statusLine: { type: 'command', command: '"C:/old/node.exe" "C:/old/agenttiles-hook.js" statusline' } }),
     );
     expect(integration.status(120).statuslineInstalled).toBe(false);
     integration.repair(120);
@@ -74,7 +74,7 @@ describe('Integration', () => {
   it('re-copies the hook script when the bundled version changes', () => {
     writeFileSync(bundledHook, '// hook v2');
     integration.syncHookScript();
-    expect(readFileSync(join(userData, 'ccdash-hook.js'), 'utf8')).toBe('// hook v2');
+    expect(readFileSync(join(userData, 'agenttiles-hook.js'), 'utf8')).toBe('// hook v2');
   });
 
   it('restores the original settings on uninstall', () => {
@@ -96,7 +96,7 @@ describe('Integration', () => {
     }
     integration.setHooks(true, 120);
     expect(lstatSync(settingsPath).isSymbolicLink()).toBe(true);
-    expect(readFileSync(real, 'utf8')).toContain('ccdash-hook.js');
+    expect(readFileSync(real, 'utf8')).toContain('agenttiles-hook.js');
     integration.setHooks(false, 120);
     expect(JSON.parse(readFileSync(real, 'utf8'))).toEqual(original);
   });

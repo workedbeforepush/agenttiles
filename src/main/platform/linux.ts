@@ -80,13 +80,13 @@ export async function focusSession(pid: number, titles: string[]): Promise<Linux
 
 export function autostartPath(): string {
   const config = process.env['XDG_CONFIG_HOME'] || join(homedir(), '.config');
-  return join(config, 'autostart', 'ccdash.desktop');
+  return join(config, 'autostart', 'agenttiles.desktop');
 }
 
 /** An XDG desktop entry that starts `exec` (program and arguments) with the desktop session. */
 export function desktopEntry(exec: string[]): string {
   const field = exec.map((part) => (/[\s"'\\$`]/.test(part) ? `"${part.replace(/(["\\$`])/g, '\\$1')}"` : part)).join(' ');
-  return ['[Desktop Entry]', 'Type=Application', 'Name=ccdash', 'Comment=Dashboard for Claude Code sessions', `Exec=${field}`, 'X-GNOME-Autostart-enabled=true', ''].join('\n');
+  return ['[Desktop Entry]', 'Type=Application', 'Name=AgentTiles', 'Comment=Dashboard for Claude Code sessions', `Exec=${field}`, 'X-GNOME-Autostart-enabled=true', ''].join('\n');
 }
 
 export function setAutostart(enabled: boolean, exec: string[]): void {

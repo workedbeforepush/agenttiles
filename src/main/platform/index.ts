@@ -51,7 +51,7 @@ export async function claudeProcesses(): Promise<number[] | null> {
   return null;
 }
 
-/** Starts ccdash with the user session (Linux; Windows and macOS use Electron's login items). */
+/** Starts AgentTiles with the user session (Linux; Windows and macOS use Electron's login items). */
 export function setLinuxAutostart(enabled: boolean, exec: string[]): void {
   linux?.setAutostart(enabled, exec);
 }
@@ -82,12 +82,12 @@ export async function openTerminal(cwd: string, command: string[], env: NodeJS.P
 /** 'noX11' / 'noXdotool': Linux focus needs an X11 display and xdotool. */
 export type FocusResult = 'focused' | 'minimized' | 'notFound' | 'unsupported' | 'noX11' | 'noXdotool';
 
-/** The session and window ccdash brought to front last; a second click on that tile sends the window away again. */
+/** The session and window AgentTiles brought to front last; a second click on that tile sends the window away again. */
 let lastFocus: { sessionId: string; hwnd: string } | null = null;
 
 /**
  * Toggles the window hosting a Claude Code session: brings it to front (selecting the Windows Terminal tab), or
- * minimizes it when ccdash showed exactly this session last and the window is still frontmost on its monitor.
+ * minimizes it when AgentTiles showed exactly this session last and the window is still frontmost on its monitor.
  */
 export async function focusSession(sessionId: string, pid: number, titles: string[]): Promise<FocusResult> {
   if (mac) return mac.focusSession(pid);

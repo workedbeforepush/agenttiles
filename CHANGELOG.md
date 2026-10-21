@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to ccdash are documented here. The format follows
+All notable changes to AgentTiles are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
@@ -10,7 +10,7 @@ First public version.
 ### Added
 
 - Live tile per running Claude Code session, found through Claude Code's session registry, including sessions that
-  were running before ccdash started.
+  were running before AgentTiles started.
 - Optional hooks: live tool activity, subagents, tasks, Allow / Always allow / Deny from the tile and the needs-you
   banner, answers to questions, read-only plan review.
 - Diff preview for Edit, MultiEdit and Write requests, with an optional reason for Claude on deny.
@@ -29,4 +29,4 @@ First public version.
 - Linux (experimental): jump to the terminal window on X11 with xdotool; start and resume sessions in the first
   installed terminal; launcher count; XDG autostart.
 
-[Unreleased]: https://github.com/workedbeforepush/ccdash/commits/main
+[Unreleased]: https://github.com/workedbeforepush/agenttiles/commits/main

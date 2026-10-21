@@ -25,7 +25,7 @@ export class Attention {
     for (const tile of tiles) {
       const firstSight = !this.seen.has(tile.sessionId);
       this.seen.add(tile.sessionId);
-      // Sessions already waiting or full when ccdash starts are marked, not announced: no burst of toasts on start.
+      // Sessions already waiting or full when AgentTiles starts are marked, not announced: no burst of toasts on start.
       if (this.remind(tile, now, settings.reminderMin, firstSight)) nudges.push({ tile, kind: 'reminder' });
       if (this.contextFull(tile, settings.contextWarnPct) && !firstSight) nudges.push({ tile, kind: 'contextFull' });
     }

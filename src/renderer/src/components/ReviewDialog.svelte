@@ -24,7 +24,7 @@
     if (sending) return;
     sending = true;
     try {
-      if (await window.ccdash.decidePermission(pending.id, request)) onClose();
+      if (await window.agenttiles.decidePermission(pending.id, request)) onClose();
       else failed = true;
     } catch {
       failed = true;
@@ -39,7 +39,7 @@
 
   /** Plans are approved in Claude Code's own dialog; it does not take that decision from hooks. */
   function openTerminal(): void {
-    void window.ccdash.tileAction(sessionId, 'focus');
+    void window.agenttiles.tileAction(sessionId, 'focus');
     onClose();
   }
 

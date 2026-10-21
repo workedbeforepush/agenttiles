@@ -1,8 +1,8 @@
-import type { CcdashApi } from '../../preload/api';
+import type { AgentTilesApi } from '../../preload/api';
 
 declare global {
   interface Window {
-    ccdash: CcdashApi;
+    agenttiles: AgentTilesApi;
   }
 }
 

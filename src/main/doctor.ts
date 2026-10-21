@@ -1,4 +1,4 @@
-// Diagnostics: compares the registry, `claude agents --json` and what ccdash shows.
+// Diagnostics: compares the registry, `claude agents --json` and what AgentTiles shows.
 import { execFile } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';

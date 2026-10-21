@@ -21,7 +21,7 @@ export class AppTray {
 
   constructor(actions: TrayActions) {
     this.tray = new Tray(placeholderIcon());
-    this.tray.setToolTip('ccdash');
+    this.tray.setToolTip('AgentTiles');
     this.tray.on('click', () => actions.toggle());
     this.tray.setContextMenu(
       Menu.buildFromTemplate([

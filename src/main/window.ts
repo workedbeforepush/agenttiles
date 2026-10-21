@@ -28,7 +28,7 @@ export function createMainWindow(config: ConfigStore, shouldHideOnClose: () => b
     minWidth: 260,
     minHeight: 200,
     show: false,
-    title: 'ccdash',
+    title: 'AgentTiles',
     icon: APP_ICON,
     autoHideMenuBar: true,
     alwaysOnTop: config.config.settings.alwaysOnTop,
@@ -47,7 +47,7 @@ export function createMainWindow(config: ConfigStore, shouldHideOnClose: () => b
       appId: WINDOW_APP_ID,
       appIconPath: APP_ICON,
       relaunchCommand: relaunch,
-      relaunchDisplayName: 'ccdash',
+      relaunchDisplayName: 'AgentTiles',
     });
   }
 

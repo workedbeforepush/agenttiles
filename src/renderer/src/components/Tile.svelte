@@ -32,7 +32,7 @@
 
   function act(action: TileAction): void {
     menu = null;
-    void window.ccdash.tileAction(tile.sessionId, action);
+    void window.agenttiles.tileAction(tile.sessionId, action);
   }
 
   function openMenu(event: MouseEvent): void {
@@ -54,7 +54,7 @@
     renaming = false;
     const value = renameValue.trim();
     if (value === tile.name) return;
-    void window.ccdash.renameTile(tile.sessionId, value.length > 0 ? value : null);
+    void window.agenttiles.renameTile(tile.sessionId, value.length > 0 ? value : null);
   }
 
   function onRenameKey(event: KeyboardEvent): void {
@@ -65,7 +65,7 @@
 
   function decide(event: MouseEvent, decision: 'allow' | 'deny', always = false): void {
     event.stopPropagation();
-    if (tile.pending) void window.ccdash.decidePermission(tile.pending.id, { decision, always });
+    if (tile.pending) void window.agenttiles.decidePermission(tile.pending.id, { decision, always });
   }
 
   function review(event: Event): void {

@@ -85,7 +85,7 @@ select {
   padding: 4px 8px;
 }
 
-/* Reduce motion: from the ccdash setting or the OS preference. */
+/* Reduce motion: from the AgentTiles setting or the OS preference. */
 .reduce-motion *,
 .reduce-motion *::before,
 .reduce-motion *::after {

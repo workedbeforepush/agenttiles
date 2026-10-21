@@ -15,7 +15,7 @@
     loading = true;
     failure = null;
     try {
-      report = await window.ccdash.runDoctor();
+      report = await window.agenttiles.runDoctor();
     } catch (error) {
       failure = (error as Error).message;
     } finally {

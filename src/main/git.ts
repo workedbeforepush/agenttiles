@@ -1,5 +1,5 @@
 // Current git branch of a session's working directory, read from .git/HEAD.
-// Claude Code records the branch once per session in the transcript and does not update it, so ccdash reads it itself.
+// Claude Code records the branch once per session in the transcript and does not update it, so AgentTiles reads it itself.
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 

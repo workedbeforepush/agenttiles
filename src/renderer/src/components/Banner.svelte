@@ -25,7 +25,7 @@
 
   function decide(event: MouseEvent, tile: TileView, decision: 'allow' | 'deny', always = false): void {
     event.stopPropagation();
-    if (tile.pending) void window.ccdash.decidePermission(tile.pending.id, { decision, always });
+    if (tile.pending) void window.agenttiles.decidePermission(tile.pending.id, { decision, always });
   }
 </script>
 
@@ -39,7 +39,7 @@
         style:--c={stateColor(tile.state)}
         role="button"
         tabindex="0"
-        onclick={() => void window.ccdash.tileAction(tile.sessionId, 'focus')}
+        onclick={() => void window.agenttiles.tileAction(tile.sessionId, 'focus')}
         title="Jump to terminal"
       >
         {#if index <= 9}<span class="key">{index}</span>{/if}

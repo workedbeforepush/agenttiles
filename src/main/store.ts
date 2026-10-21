@@ -84,7 +84,7 @@ export class SessionStore {
   /** Last successfully parsed registry entry per file, used while a file is being rewritten. */
   private readonly lastGood = new Map<string, RegistryEntry>();
   private readonly misses = new Map<string, number>();
-  /** Processes ccdash started itself (limit probes); their registry entries are not sessions of the user. */
+  /** Processes AgentTiles started itself (limit probes); their registry entries are not sessions of the user. */
   private readonly ownPids = new Set<number>();
   private fiveHour: RateLimit | null = null;
   private sevenDay: RateLimit | null = null;
@@ -419,7 +419,7 @@ export class SessionStore {
     this.changed();
   }
 
-  /** Marks a process ccdash started itself, or forgets it once it ended. */
+  /** Marks a process AgentTiles started itself, or forgets it once it ended. */
   ownProcess(pid: number, running: boolean): void {
     if (running) {
       this.ownPids.add(pid);
