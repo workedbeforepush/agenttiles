@@ -6,7 +6,7 @@ import { MAX_LINE_BYTES, encode, type HookMessage } from '../src/core/protocol';
 import { IpcServer } from '../src/main/ipcServer';
 
 const path =
-  process.platform === 'win32' ? `\\\\.\\pipe\\ccdash-ipc-test-${process.pid}` : join(tmpdir(), `ccdash-ipc-${process.pid}.sock`);
+  process.platform === 'win32' ? `\\\\.\\pipe\\agenttiles-ipc-test-${process.pid}` : join(tmpdir(), `agenttiles-ipc-${process.pid}.sock`);
 const events: Record<string, unknown>[] = [];
 let server: IpcServer;
 

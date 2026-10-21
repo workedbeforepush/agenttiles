@@ -122,7 +122,7 @@ export interface TileView {
 export interface RateLimit {
   usedPct: number;
   resetsAt: number | null;
-  /** Epoch ms of the statusline update that reported this value; ccdash learns limits only from statusline runs. */
+  /** Epoch ms of the statusline update that reported this value; AgentTiles learns limits only from statusline runs. */
   observedAt: number;
 }
 
@@ -150,7 +150,7 @@ export interface DaySummary {
 export interface StatsView {
   /** Oldest first, one entry per day including empty ones; the last entry is today, live. */
   days: DaySummary[];
-  /** First day ccdash has data for (YYYY-MM-DD). */
+  /** First day AgentTiles has data for (YYYY-MM-DD). */
   recordedSince: string;
 }
 
@@ -211,7 +211,7 @@ export interface Settings {
   alwaysOnTop: boolean;
   permissionTimeoutSec: number;
   toasts: boolean;
-  /** Sound cue per state, played by ccdash itself (toasts stay silent). */
+  /** Sound cue per state, played by AgentTiles itself (toasts stay silent). */
   sounds: Record<SoundState, boolean>;
   /** Volume of the sound cues, 0..100. */
   soundVolume: number;

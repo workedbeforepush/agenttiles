@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { parseHead, readGitBranch } from '../src/main/git';
 
-const root = mkdtempSync(join(tmpdir(), 'ccdash-git-'));
+const root = mkdtempSync(join(tmpdir(), 'agenttiles-git-'));
 afterAll(() => rmSync(root, { recursive: true, force: true }));
 
 function repo(name: string, head: string): string {

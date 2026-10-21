@@ -10,7 +10,7 @@ import {
   uninstallStatusline,
 } from '../src/core/hookConfig';
 
-const options = { nodePath: 'C:\\nodejs\\node.exe', hookPath: 'C:\\data\\ccdash\\ccdash-hook.js', permissionTimeoutSec: 600 };
+const options = { nodePath: 'C:\\nodejs\\node.exe', hookPath: 'C:\\data\\agenttiles\\agenttiles-hook.js', permissionTimeoutSec: 600 };
 
 const foreign = {
   model: 'opus',
@@ -62,7 +62,7 @@ describe('statusline', () => {
     expect(replaced).toEqual(previous);
     expect(statuslineInstalled(settings)).toBe(true);
     expect((settings['statusLine'] as { command: string }).command).toBe(
-      '"C:/nodejs/node.exe" "C:/data/ccdash/ccdash-hook.js" statusline',
+      '"C:/nodejs/node.exe" "C:/data/agenttiles/agenttiles-hook.js" statusline',
     );
     expect(uninstallStatusline(settings, replaced)).toEqual({ statusLine: previous });
   });

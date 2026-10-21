@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { hooksInstalled, installHooks } from '../src/core/hookConfig';
 import { newRecord, toTile } from '../src/core/session';
 
-const options = { nodePath: 'C:\\nodejs\\node.exe', hookPath: 'C:\\data\\ccdash\\ccdash-hook.js', permissionTimeoutSec: 600 };
+const options = { nodePath: 'C:\\nodejs\\node.exe', hookPath: 'C:\\data\\agenttiles\\agenttiles-hook.js', permissionTimeoutSec: 600 };
 
 describe('project folder and branch', () => {
   it('never shows the transcript placeholder "HEAD" as branch', () => {
@@ -13,7 +13,7 @@ describe('project folder and branch', () => {
     expect(toTile(rec, { rename: null, pinned: false, branch: null }).git.branch).toBe('feature/x');
   });
 
-  it('reinstalls when an event from an older version still has a ccdash hook', () => {
+  it('reinstalls when an event from an older version still has an AgentTiles hook', () => {
     const current = installHooks({}, options);
     expect(hooksInstalled(current, options)).toBe(true);
     const hooks = current['hooks'] as Record<string, unknown[]>;

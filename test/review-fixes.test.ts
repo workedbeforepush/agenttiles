@@ -116,22 +116,22 @@ describe('permission release', () => {
 });
 
 describe('settings.json merge edge cases', () => {
-  const options = { nodePath: 'node', hookPath: '/x/ccdash-hook.js', permissionTimeoutSec: 600 };
+  const options = { nodePath: 'node', hookPath: '/x/agenttiles-hook.js', permissionTimeoutSec: 600 };
 
   it('keeps foreign groups with an empty hooks list and foreign empty events', () => {
     const settings = { hooks: { Stop: [{ matcher: '', hooks: [] }], Custom: [] } };
     expect(uninstallHooks(installHooks(settings, options))).toEqual(settings);
   });
 
-  it('removes events that held only ccdash entries of an older version', () => {
-    const old = { hooks: { RetiredEvent: [{ hooks: [{ type: 'command', command: 'node', args: ['/x/ccdash-hook.js', 'hook'] }] }] } };
+  it('removes events that held only AgentTiles entries of an older version', () => {
+    const old = { hooks: { RetiredEvent: [{ hooks: [{ type: 'command', command: 'node', args: ['/x/agenttiles-hook.js', 'hook'] }] }] } };
     const hooks = installHooks(old, options)['hooks'] as Record<string, unknown>;
     expect(hooks['RetiredEvent']).toBeUndefined();
   });
 });
 
 describe('daily stats robustness', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'ccdash-daily-robust-'));
+  const dir = mkdtempSync(join(tmpdir(), 'agenttiles-daily-robust-'));
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
   it('starts over instead of failing on a damaged today.json', () => {

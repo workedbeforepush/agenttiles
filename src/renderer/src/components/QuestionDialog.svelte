@@ -72,7 +72,7 @@
     if (!complete || sending) return;
     sending = true;
     const answers = Object.fromEntries(questions.map((question, i) => [question.question, answerOf(i)]));
-    const ok = await window.ccdash.answerQuestion(id, answers);
+    const ok = await window.agenttiles.answerQuestion(id, answers);
     sending = false;
     if (ok) onClose();
     else failed = true;

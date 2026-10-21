@@ -1,5 +1,5 @@
 {
-  "name": "ccdash",
+  "name": "agenttiles",
   "version": "0.1.0",
   "description": "Mission control for Claude Code: every running session on one screen. Approve, answer and jump to the right terminal.",
   "keywords": [
@@ -14,13 +14,13 @@
     "svelte",
     "monitoring"
   ],
-  "homepage": "https://github.com/workedbeforepush/ccdash#readme",
+  "homepage": "https://github.com/workedbeforepush/agenttiles#readme",
   "bugs": {
-    "url": "https://github.com/workedbeforepush/ccdash/issues"
+    "url": "https://github.com/workedbeforepush/agenttiles/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/workedbeforepush/ccdash.git"
+    "url": "git+https://github.com/workedbeforepush/agenttiles.git"
   },
   "license": "MIT",
   "author": "workedbeforepush",

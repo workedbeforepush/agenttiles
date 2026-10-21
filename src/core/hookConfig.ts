@@ -1,9 +1,9 @@
-// Pure merge logic for ccdash entries in Claude Code's ~/.claude/settings.json.
+// Pure merge logic for AgentTiles entries in Claude Code's ~/.claude/settings.json.
 // Foreign hooks and settings are always preserved.
 
-export const HOOK_SCRIPT_NAME = 'ccdash-hook.js';
+export const HOOK_SCRIPT_NAME = 'agenttiles-hook.js';
 
-/** Events ccdash registers. PostToolBatch is intentionally not registered: ccdash ignores it. */
+/** Events AgentTiles registers. PostToolBatch is intentionally not registered: AgentTiles ignores it. */
 export const HOOK_EVENTS = [
   'SessionStart',
   'SessionEnd',
@@ -57,7 +57,7 @@ function hooksObject(settings: ClaudeSettings): Record<string, HookGroup[]> {
   return hooks && typeof hooks === 'object' ? (hooks as Record<string, HookGroup[]>) : {};
 }
 
-/** Removes ccdash handlers; a group disappears only when it held ccdash handlers and nothing else. */
+/** Removes AgentTiles handlers; a group disappears only when it held AgentTiles handlers and nothing else. */
 function withoutOurs(groups: HookGroup[]): HookGroup[] {
   const result: HookGroup[] = [];
   for (const group of groups) {
@@ -87,7 +87,7 @@ export function installHooks(settings: ClaudeSettings, options: InstallOptions):
   const hooks: Record<string, HookGroup[]> = {};
   for (const [event, groups] of Object.entries(hooksObject(settings))) {
     const kept = withoutOurs(groups);
-    // An event that only held ccdash entries from an older version disappears instead of staying as [].
+    // An event that only held AgentTiles entries from an older version disappears instead of staying as [].
     if (kept.length > 0 || groups.length === 0) hooks[event] = kept;
   }
   for (const event of HOOK_EVENTS) {
@@ -109,8 +109,8 @@ export function uninstallHooks(settings: ClaudeSettings): ClaudeSettings {
 }
 
 /**
- * True when every ccdash event is registered with exactly the given hook script and timeout, and no other event
- * still carries a ccdash handler from an older version.
+ * True when every AgentTiles event is registered with exactly the given hook script and timeout, and no other event
+ * still carries an AgentTiles handler from an older version.
  */
 export function hooksInstalled(settings: ClaudeSettings, options: InstallOptions): boolean {
   const hooks = hooksObject(settings);

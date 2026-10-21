@@ -1,5 +1,5 @@
-// ccdash-hook.js: invoked by Claude Code as a command hook ("hook") or as the statusline command ("statusline").
-// Forwards the JSON from stdin to the ccdash app. Silent and exit code 0 when the app is not running.
+// agenttiles-hook.js: invoked by Claude Code as a command hook ("hook") or as the statusline command ("statusline").
+// Forwards the JSON from stdin to the AgentTiles app. Silent and exit code 0 when the app is not running.
 import { randomUUID } from 'node:crypto';
 import { appendFileSync, existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { createConnection, type Socket } from 'node:net';
@@ -43,7 +43,7 @@ function logError(message: string): void {
   }
 }
 
-/** The app writes a fresh endpoint on every start. No file means ccdash never ran here: behave as not running. */
+/** The app writes a fresh endpoint on every start. No file means AgentTiles never ran here: behave as not running. */
 function readEndpoint(): Endpoint | null {
   try {
     return parseEndpoint(readFileSync(ENDPOINT_FILE, 'utf8'));
@@ -140,7 +140,7 @@ function chainShell(command: string): { file: string; args: string[] } {
   return { file: process.env['ComSpec'] ?? 'cmd.exe', args: ['/d', '/s', '/c', command] };
 }
 
-/** Runs the statusline command that was configured before ccdash, if any, and returns its output. */
+/** Runs the statusline command that was configured before AgentTiles, if any, and returns its output. */
 function runChain(input: string): string {
   if (!existsSync(CHAIN_FILE)) return '';
   try {

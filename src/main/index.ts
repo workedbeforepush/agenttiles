@@ -61,12 +61,12 @@ async function start(): Promise<void> {
   const userData = app.getPath('userData');
   const config = new ConfigStore(userData);
   initLog(userData, config.config.settings.logLevel);
-  log.info(`ccdash ${app.getVersion()} starting, userData ${userData}`);
+  log.info(`AgentTiles ${app.getVersion()} starting, userData ${userData}`);
   await initPlatform();
   registerAppIdentity(APP_ID, APP_NAME, APP_ICON_PNG);
 
   const daily = new DailyStats(userData);
-  const integration = new Integration(userData, join(app.getAppPath(), 'out', 'hook', 'ccdash-hook.js'));
+  const integration = new Integration(userData, join(app.getAppPath(), 'out', 'hook', 'agenttiles-hook.js'));
   const settings = (): Settings => config.config.settings;
   let quitting = false;
   let snapshot: Snapshot = {
@@ -141,10 +141,10 @@ async function start(): Promise<void> {
       rec.transcript.aiTitle,
     ].filter((t): t is string => t !== null);
     const result = await focusSession(rec.sessionId, reg.pid, titles);
-    if (result === 'unsupported') notifier.info('ccdash', 'Focus jump is not supported on this OS.');
-    else if (result === 'noX11') notifier.info('ccdash', 'Focus jump needs an X11 session; Wayland does not let apps raise windows.');
-    else if (result === 'noXdotool') notifier.info('ccdash', 'Focus jump needs xdotool. Install it with your package manager.');
-    else if (result === 'notFound') notifier.info('ccdash', `No terminal window found for ${rec.sessionId}.`);
+    if (result === 'unsupported') notifier.info('AgentTiles', 'Focus jump is not supported on this OS.');
+    else if (result === 'noX11') notifier.info('AgentTiles', 'Focus jump needs an X11 session; Wayland does not let apps raise windows.');
+    else if (result === 'noXdotool') notifier.info('AgentTiles', 'Focus jump needs xdotool. Install it with your package manager.');
+    else if (result === 'notFound') notifier.info('AgentTiles', `No terminal window found for ${rec.sessionId}.`);
   }
 
   function applyHotkey(): void {
@@ -160,7 +160,7 @@ async function start(): Promise<void> {
     }
     if (!ok) {
       log.warn(`global hotkey ${s.hotkey} could not be registered`);
-      notifier.info('ccdash', `Hotkey ${s.hotkey} is not available.`);
+      notifier.info('AgentTiles', `Hotkey ${s.hotkey} is not available.`);
     }
   }
 
@@ -279,7 +279,7 @@ async function start(): Promise<void> {
       Object.entries(answers as Record<string, unknown>).filter((e): e is [string, string] => typeof e[1] === 'string'),
     );
     const ok = store.answerQuestion(id, clean);
-    log.info(`question ${id}: ${ok ? 'answered' : 'answer rejected'} from ccdash`);
+    log.info(`question ${id}: ${ok ? 'answered' : 'answer rejected'} from AgentTiles`);
     return ok;
   });
   ipcMain.handle('permission:decide', (_e, id: string, request: DecisionRequest) => {
@@ -290,7 +290,7 @@ async function start(): Promise<void> {
       ...(typeof request.message === 'string' ? { message: request.message } : {}),
     };
     const ok = store.decide(id, clean);
-    log.info(`permission ${id}: ${clean.decision}${clean.always ? ' always' : ''} from ccdash${ok ? '' : ' (gone)'}`);
+    log.info(`permission ${id}: ${clean.decision}${clean.always ? ' always' : ''} from AgentTiles${ok ? '' : ' (gone)'}`);
     return ok;
   });
   ipcMain.handle('tiles:order', (_e, ids: string[]) => {

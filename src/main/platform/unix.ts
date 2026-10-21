@@ -64,7 +64,7 @@ export function onPath(name: string): boolean {
   return (process.env['PATH'] ?? '').split(delimiter).some((dir) => dir && existsSync(join(dir, name)));
 }
 
-const MARK = '__CCDASH_PATH__';
+const MARK = '__AGENTTILES_PATH__';
 
 /** The PATH printed between markers by a login shell; null when the output has none (shell startup noise is ignored). */
 export function parseShellPath(output: string): string | null {

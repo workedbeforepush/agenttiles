@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { DailyStats } from '../src/main/daily';
 
-const dir = mkdtempSync(join(tmpdir(), 'ccdash-daily-'));
+const dir = mkdtempSync(join(tmpdir(), 'agenttiles-daily-'));
 
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
@@ -41,7 +41,7 @@ describe('DailyStats', () => {
   });
 
   it('archives a finished day per project and lists empty days', () => {
-    const own = mkdtempSync(join(tmpdir(), 'ccdash-history-'));
+    const own = mkdtempSync(join(tmpdir(), 'agenttiles-history-'));
     try {
       let now = new Date(2026, 9, 20, 23, 0).getTime();
       const stats = new DailyStats(own, () => now);

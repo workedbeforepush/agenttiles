@@ -5,7 +5,7 @@ import { join } from 'node:path';
 export const PROTOCOL_VERSION = 2;
 
 /**
- * ccdash writes this file into its userData directory on every start. It holds a random endpoint (pipe name or socket
+ * AgentTiles writes this file into its userData directory on every start. It holds a random endpoint (pipe name or socket
  * path) and a random token. Only the user can read it and the hook script lives next to it, so other local users can
  * neither find the endpoint to squat it nor forge messages.
  */
@@ -19,7 +19,7 @@ export interface Endpoint {
 /** A fresh random endpoint: a named pipe on Windows, a socket in a private directory elsewhere. */
 export function newEndpoint(privateDir: string): Endpoint {
   const id = randomBytes(8).toString('hex');
-  const path = process.platform === 'win32' ? `\\\\.\\pipe\\ccdash-${id}` : join(privateDir, `ccdash-${id}.sock`);
+  const path = process.platform === 'win32' ? `\\\\.\\pipe\\agenttiles-${id}` : join(privateDir, `agenttiles-${id}.sock`);
   return { path, token: randomBytes(32).toString('hex') };
 }
 
@@ -130,7 +130,7 @@ export function permissionOutput(decision: PermissionDecision, extras: DecisionE
           ...(extras.updatedInput ? { updatedInput: extras.updatedInput } : {}),
           ...(extras.updatedPermissions?.length ? { updatedPermissions: extras.updatedPermissions } : {}),
         }
-      : { behavior: 'deny', message: extras.message ?? 'Denied from ccdash.' };
+      : { behavior: 'deny', message: extras.message ?? 'Denied from AgentTiles.' };
   return JSON.stringify({
     hookSpecificOutput: { hookEventName: 'PermissionRequest', decision: body },
   });

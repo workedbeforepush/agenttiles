@@ -481,7 +481,7 @@ export interface TileOverrides {
   branch: string | null;
 }
 
-/** Name priority: ccdash rename > user-set Claude name > ai-title > derived name. */
+/** Name priority: AgentTiles rename > user-set Claude name > ai-title > derived name. */
 export function tileName(rec: SessionRecord, rename: string | null): string {
   if (rename) return rename;
   const reg = rec.registry;

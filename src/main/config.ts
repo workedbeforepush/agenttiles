@@ -1,4 +1,4 @@
-// ccdash configuration persisted as config.toml in Electron's userData directory.
+// AgentTiles configuration persisted as config.toml in Electron's userData directory.
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse, stringify } from 'smol-toml';

@@ -8,12 +8,12 @@ import { build } from 'esbuild';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { LineSplitter, encode, type HookMessage } from '../src/core/protocol';
 
-const dir = mkdtempSync(join(tmpdir(), 'ccdash-test-'));
-const hookPath = join(dir, 'ccdash-hook.js');
+const dir = mkdtempSync(join(tmpdir(), 'agenttiles-test-'));
+const hookPath = join(dir, 'agenttiles-hook.js');
 const endpointFile = join(dir, 'ipc-token');
 const pipe =
-  process.platform === 'win32' ? `\\\\.\\pipe\\ccdash-test-${process.pid}` : join(dir, 'ccdash-test.sock');
-const missing = process.platform === 'win32' ? `\\\\.\\pipe\\ccdash-missing-${process.pid}` : join(dir, 'missing.sock');
+  process.platform === 'win32' ? `\\\\.\\pipe\\agenttiles-test-${process.pid}` : join(dir, 'agenttiles-test.sock');
+const missing = process.platform === 'win32' ? `\\\\.\\pipe\\agenttiles-missing-${process.pid}` : join(dir, 'missing.sock');
 
 function writeEndpoint(path: string): void {
   writeFileSync(endpointFile, JSON.stringify({ path, token: 'test-token' }));
@@ -67,7 +67,7 @@ afterAll(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-describe('ccdash-hook', () => {
+describe('agenttiles-hook', () => {
   it('forwards a hook event with token and start time, and exits 0 without output', async () => {
     const input = { session_id: 's1', hook_event_name: 'Stop', cwd: '/x' };
     const before = received.length;

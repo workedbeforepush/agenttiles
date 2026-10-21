@@ -1,4 +1,4 @@
-// Minimal file logger with size-based rotation (ccdash.log -> ccdash.1.log).
+// Minimal file logger with size-based rotation (agenttiles.log -> agenttiles.1.log).
 import { appendFileSync, existsSync, renameSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import type { LogLevel } from '../core/types';
@@ -10,7 +10,7 @@ let file: string | null = null;
 let level: LogLevel = 'info';
 
 export function initLog(dir: string, initialLevel: LogLevel): void {
-  file = join(dir, 'ccdash.log');
+  file = join(dir, 'agenttiles.log');
   level = initialLevel;
 }
 

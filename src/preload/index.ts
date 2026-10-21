@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { CcdashApi } from './api';
+import type { AgentTilesApi } from './api';
 
-const api: CcdashApi = {
+const api: AgentTilesApi = {
   getSnapshot: () => ipcRenderer.invoke('snapshot:get'),
   onSnapshot: (listener) => {
     ipcRenderer.on('snapshot', (_event, snapshot) => listener(snapshot));
@@ -43,4 +43,4 @@ const api: CcdashApi = {
   },
 };
 
-contextBridge.exposeInMainWorld('ccdash', api);
+contextBridge.exposeInMainWorld('agenttiles', api);

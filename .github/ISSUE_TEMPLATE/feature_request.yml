@@ -1,5 +1,5 @@
 name: Feature request
-description: An idea that would make ccdash more useful
+description: An idea that would make AgentTiles more useful
 labels: [enhancement]
 body:
   - type: textarea
@@ -12,7 +12,7 @@ body:
   - type: textarea
     id: idea
     attributes:
-      label: What would you like ccdash to do?
+      label: What would you like AgentTiles to do?
     validations:
       required: true
   - type: textarea

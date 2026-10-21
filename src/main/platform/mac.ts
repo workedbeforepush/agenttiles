@@ -99,7 +99,7 @@ export type MacFocus = 'focused' | 'notFound';
 
 /**
  * Brings the session's terminal to the front. Terminal.app and iTerm2 switch to the exact tab (the first time,
- * macOS asks the user to allow ccdash to control the terminal); other hosts (VS Code, JetBrains, Ghostty, ...) are
+ * macOS asks the user to allow AgentTiles to control the terminal); other hosts (VS Code, JetBrains, Ghostty, ...) are
  * brought to the front as an app.
  */
 export async function focusSession(pid: number): Promise<MacFocus> {

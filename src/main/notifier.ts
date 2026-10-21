@@ -82,7 +82,7 @@ export class Notifier {
       if (now - (this.last.get(tile.sessionId) ?? 0) < PER_SESSION_GAP_MS) continue;
       this.last.set(tile.sessionId, now);
       const { title, body } = toastText(tile);
-      // Silent: ccdash plays its own per-state cue, a second sound from Windows would double it.
+      // Silent: AgentTiles plays its own per-state cue, a second sound from Windows would double it.
       this.show(title, body, true, () => this.onClick(tile.sessionId));
     }
   }

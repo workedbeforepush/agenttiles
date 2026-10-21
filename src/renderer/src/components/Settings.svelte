@@ -95,7 +95,7 @@
   function update(patch: SettingsPatch): void {
     // Settings values are reactive proxies; IPC can only send plain data.
     const plain = $state.snapshot(patch) as SettingsPatch;
-    void run(() => window.ccdash.updateSettings(plain));
+    void run(() => window.agenttiles.updateSettings(plain));
   }
 
   function checkbox(
@@ -133,7 +133,7 @@
           type="checkbox"
           checked={i.hooksInstalled}
           disabled={busy}
-          onchange={(e) => run(() => window.ccdash.setHooks((e.currentTarget as HTMLInputElement).checked))}
+          onchange={(e) => run(() => window.agenttiles.setHooks((e.currentTarget as HTMLInputElement).checked))}
         />
         <span>Hooks <small>live tool activity, Allow / Deny from tiles. Running sessions pick them up when Claude Code reloads its settings.</small></span>
       </label>
@@ -142,7 +142,7 @@
           type="checkbox"
           checked={i.statuslineInstalled}
           disabled={busy}
-          onchange={(e) => run(() => window.ccdash.setStatusline((e.currentTarget as HTMLInputElement).checked))}
+          onchange={(e) => run(() => window.agenttiles.setStatusline((e.currentTarget as HTMLInputElement).checked))}
         />
         <span>Statusline wrapper <small>cost, context and rate limits. An existing statusline keeps working.</small></span>
       </label>
@@ -169,12 +169,12 @@
 
     <section>
       <h3>Keyboard</h3>
-      <p class="hint">Click a field and press the new key. Shortcuts work while the ccdash window has the focus.</p>
+      <p class="hint">Click a field and press the new key. Shortcuts work while the AgentTiles window has the focus.</p>
       <div class="keys">
         <div class="key-row">
           <label class="row">
             <input type="checkbox" checked={s.hotkeyEnabled} onchange={checkbox('hotkeyEnabled')} />
-            <span>Show / hide ccdash <small>global, works in every app</small></span>
+            <span>Show / hide AgentTiles <small>global, works in every app</small></span>
           </label>
           <input
             class="recorder"
@@ -241,7 +241,7 @@
       <h3>Notifications</h3>
       <label class="row"><input type="checkbox" checked={s.toasts} onchange={checkbox('toasts')} /> Toasts when a session needs you, finishes or fails</label>
       <div class="sounds">
-        <span class="sub">Sound per state <small>played by ccdash, also while its window is focused</small></span>
+        <span class="sub">Sound per state <small>played by AgentTiles, also while its window is focused</small></span>
         <label class="row volume">
           Volume
           <input
@@ -328,13 +328,13 @@
       {#each view.hiddenSessions as hidden (hidden.sessionId)}
         <div class="hidden-row">
           <span>Session: {hidden.name}</span>
-          <button onclick={() => run(() => window.ccdash.unhideSession(hidden.sessionId))}>Show</button>
+          <button onclick={() => run(() => window.agenttiles.unhideSession(hidden.sessionId))}>Show</button>
         </div>
       {/each}
       {#each view.hiddenProjects as path (path)}
         <div class="hidden-row">
           <span title={path}>Project: {path}</span>
-          <button onclick={() => run(() => window.ccdash.unhideProject(path))}>Show</button>
+          <button onclick={() => run(() => window.agenttiles.unhideProject(path))}>Show</button>
         </div>
       {/each}
     </section>

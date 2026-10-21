@@ -6,6 +6,6 @@ await build({
   platform: 'node',
   target: 'node20',
   format: 'cjs',
-  outfile: 'out/hook/ccdash-hook.js',
+  outfile: 'out/hook/agenttiles-hook.js',
   logLevel: 'warning',
 });

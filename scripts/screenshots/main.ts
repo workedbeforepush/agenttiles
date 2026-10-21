@@ -1,5 +1,5 @@
 // Renders README images from the real UI with demo data: run `npm run screenshots`.
-// The real renderer and preload are loaded; this file stands in for ccdash's main process and answers its IPC
+// The real renderer and preload are loaded; this file stands in for AgentTiles's main process and answers its IPC
 // channels with invented sessions (see demo.ts). Output goes to docs/images/.
 import { BrowserWindow, app, ipcMain, nativeTheme, type NativeImage } from 'electron';
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
@@ -32,8 +32,8 @@ const GIF_FRAME_MS = 110;
 app.commandLine.appendSwitch('lang', 'en-US');
 // Linux CI runs under a virtual display without a GPU; software rendering keeps captures working there.
 if (process.platform === 'linux') app.disableHardwareAcceleration();
-// Never touch the real ccdash data.
-app.setPath('userData', mkdtempSync(join(tmpdir(), 'ccdash-screenshots-')));
+// Never touch the real AgentTiles data.
+app.setPath('userData', mkdtempSync(join(tmpdir(), 'agenttiles-screenshots-')));
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
@@ -280,7 +280,7 @@ async function socialPreview(dashboard: NativeImage): Promise<void> {
       box-shadow: 0 30px 80px rgb(0 0 0 / 0.6), 0 0 0 1px rgb(255 255 255 / 0.08); }
   </style></head><body>
     <div class="text">
-      <div class="brand"><img src="${icon}"><h1>ccdash</h1></div>
+      <div class="brand"><img src="${icon}"><h1>AgentTiles</h1></div>
       <p>Every Claude Code session on one screen.</p>
       <ul><li>Live status of all sessions</li><li>Allow, deny and answer from the dashboard</li><li>Plan limits, cost and stats</li></ul>
     </div>

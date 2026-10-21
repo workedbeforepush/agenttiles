@@ -1,4 +1,4 @@
-// Installs and removes ccdash's hooks and statusline wrapper in ~/.claude/settings.json.
+// Installs and removes AgentTiles's hooks and statusline wrapper in ~/.claude/settings.json.
 import { execFileSync } from 'node:child_process';
 import {
   copyFileSync,
@@ -29,7 +29,7 @@ import {
 } from '../core/hookConfig';
 import { log } from './log';
 
-const NODE_MISSING = 'Node.js was not found in PATH. ccdash hooks need Node.js installed.';
+const NODE_MISSING = 'Node.js was not found in PATH. AgentTiles hooks need Node.js installed.';
 
 export class Integration {
   readonly hookPath: string;
@@ -83,7 +83,7 @@ export class Integration {
     const next = change(this.readSettings());
     const target = this.settingsTarget();
     mkdirSync(dirname(target), { recursive: true });
-    const tmp = `${target}.ccdash.tmp`;
+    const tmp = `${target}.agenttiles.tmp`;
     writeFileSync(tmp, `${JSON.stringify(next, null, 2)}\n`);
     renameSync(tmp, target);
   }
@@ -164,7 +164,7 @@ export class Integration {
   }
 
   /**
-   * Brings existing ccdash entries up to date (node path, hook path, permission timeout). Does nothing for parts
+   * Brings existing AgentTiles entries up to date (node path, hook path, permission timeout). Does nothing for parts
    * that are not installed.
    */
   repair(permissionTimeoutSec: number): void {

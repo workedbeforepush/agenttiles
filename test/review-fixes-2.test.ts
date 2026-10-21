@@ -10,7 +10,7 @@ import { DailyStats } from '../src/main/daily';
 import type { TileView } from '../src/core/types';
 
 function withDir(run: (dir: string) => void): void {
-  const dir = mkdtempSync(join(tmpdir(), 'ccdash-r2-'));
+  const dir = mkdtempSync(join(tmpdir(), 'agenttiles-r2-'));
   try {
     run(dir);
   } finally {

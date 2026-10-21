@@ -9,6 +9,6 @@
 ## Checklist
 
 - [ ] `npm run typecheck` and `npm test` pass
-- [ ] Nothing ccdash does can block a Claude Code session (the hook still steps aside when ccdash is gone)
+- [ ] Nothing AgentTiles does can block a Claude Code session (the hook still steps aside when AgentTiles is gone)
 - [ ] UI changes: screenshots attached, and `npm run screenshots` run if README images changed
 - [ ] README.md updated where behaviour changed

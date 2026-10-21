@@ -33,7 +33,7 @@ describe('process table', () => {
 
 describe('login shell PATH', () => {
   it('reads the PATH between markers and ignores shell startup noise', () => {
-    expect(parseShellPath('Welcome!\n__CCDASH_PATH__/opt/homebrew/bin:/usr/bin__CCDASH_PATH__')).toBe('/opt/homebrew/bin:/usr/bin');
+    expect(parseShellPath('Welcome!\n__AGENTTILES_PATH__/opt/homebrew/bin:/usr/bin__AGENTTILES_PATH__')).toBe('/opt/homebrew/bin:/usr/bin');
     expect(parseShellPath('no markers here')).toBeNull();
   });
 
@@ -79,8 +79,8 @@ describe('Linux', () => {
   });
 
   it('writes an XDG autostart entry with quoted paths', () => {
-    const entry = desktopEntry(['/opt/ccdash/ccdash', '/home/me/my apps/ccdash']);
-    expect(entry).toContain('Exec=/opt/ccdash/ccdash "/home/me/my apps/ccdash"');
+    const entry = desktopEntry(['/opt/agenttiles/agenttiles', '/home/me/my apps/agenttiles']);
+    expect(entry).toContain('Exec=/opt/agenttiles/agenttiles "/home/me/my apps/agenttiles"');
     expect(entry).toContain('Type=Application');
   });
 });
