@@ -37,12 +37,13 @@
     "out/preload/",
     "out/renderer/",
     "out/hook/",
-    "resources/"
+    "resources/",
+    "out/cli/"
   ],
   "scripts": {
-    "build:hook": "node scripts/build-hook.mjs",
-    "dev": "npm run build:hook && electron-vite dev",
-    "build": "npm run build:hook && electron-vite build",
+    "build:node": "node scripts/build-node.mjs",
+    "dev": "npm run build:node && electron-vite dev",
+    "build": "npm run build:node && electron-vite build",
     "start": "npm run build && electron-vite preview",
     "typecheck": "node node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.node.json && node node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.web.json && svelte-check --tsconfig ./tsconfig.web.json --tsgo --threshold warning",
     "test": "vitest run",

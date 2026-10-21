@@ -23,6 +23,11 @@ if (args.includes('--version') || args.includes('-v')) {
   process.exit(0);
 }
 
+if (args.includes('--uninstall')) {
+  require('../out/cli/uninstall.js');
+  return;
+}
+
 // Loaded only to start: the first require downloads the Electron binary (and says so on stdout).
 const electron = require('electron'); // path of the Electron binary
 const app = join(__dirname, '..');
@@ -30,11 +35,5 @@ const app = join(__dirname, '..');
 // AgentTiles only shows its own local files under a strict content security policy.
 const platform = process.platform === 'linux' ? ['--no-sandbox'] : [];
 
-if (args.includes('--uninstall')) {
-  // In the foreground: the result is printed here.
-  const child = spawn(electron, [app, ...platform, '--uninstall'], { stdio: 'inherit' });
-  child.on('exit', (code) => process.exit(code ?? 1));
-} else {
-  const child = spawn(electron, [app, ...platform], { detached: true, stdio: 'ignore' });
-  child.unref();
-}
+const child = spawn(electron, [app, ...platform], { detached: true, stdio: 'ignore' });
+child.unref();

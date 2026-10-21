@@ -49,10 +49,7 @@ const PRUNE_INTERVAL_MS = 10 * 60 * 1000;
 const LIMIT_PROBE_INTERVAL_MS = 10 * 60 * 1000;
 const UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
-if (process.argv.includes('--uninstall')) {
-  // `agenttiles --uninstall`: remove hooks and statusline, print the result and exit (no window, no lock).
-  void app.whenReady().then(uninstall);
-} else if (!app.requestSingleInstanceLock()) {
+if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.setAppUserModelId(APP_ID);
@@ -60,23 +57,6 @@ if (process.argv.includes('--uninstall')) {
     log.error('startup failed', error);
     app.exit(1);
   });
-}
-
-function uninstall(): void {
-  const userData = app.getPath('userData');
-  initLog(userData, 'info');
-  const integration = new Integration(userData, join(app.getAppPath(), 'out', 'hook', 'agenttiles-hook.js'));
-  integration.setStatusline(false);
-  integration.setHooks(false, 0);
-  const status = integration.status(0);
-  if (status.error) {
-    console.error(`AgentTiles could not update ~/.claude/settings.json: ${status.error}`);
-    app.exit(1);
-    return;
-  }
-  console.log('AgentTiles hooks and statusline removed from ~/.claude/settings.json.');
-  console.log('You can now run: npm uninstall -g agenttiles');
-  app.exit(0);
 }
 
 async function start(): Promise<void> {
