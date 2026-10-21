@@ -5,6 +5,8 @@ All notable changes to AgentTiles are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-21
+
 First public version.
 
 ### Added
@@ -31,4 +33,5 @@ First public version.
 - npm package: `npm install -g agenttiles`, then `agenttiles`; `agenttiles --uninstall` removes the hooks and the
   statusline. AgentTiles checks npm for new versions and updates itself after a click.
 
-[Unreleased]: https://github.com/workedbeforepush/agenttiles/commits/main
+[Unreleased]: https://github.com/workedbeforepush/agenttiles/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/workedbeforepush/agenttiles/releases/tag/v0.1.0

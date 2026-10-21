@@ -46,12 +46,20 @@ jobs:
       - run: npm ci
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      # A version can already be on npm: the first release was published by hand (trusted publishing needs an
+      # existing package), or this run is repeated after the GitHub release step failed.
+      - name: Already on npm?
+        id: npm
+        run: |
+          if npm view "agenttiles@${GITHUB_REF_NAME#v}" version >/dev/null 2>&1; then echo "published=true" >> "$GITHUB_OUTPUT"; else echo "published=false" >> "$GITHUB_OUTPUT"; fi
       # prepack builds the app.
-      - run: npm publish --provenance --access public
+      - if: steps.npm.outputs.published == 'false'
+        run: npm publish --provenance --access public
       - name: GitHub release with the changelog section
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           version="${GITHUB_REF_NAME#v}"
-          awk -v v="$version" '$0 ~ "^## \\[" v "\\]" {on=1; next} on && /^## \[/ {exit} on {print}' CHANGELOG.md > notes.md
+          # The lines below "## [x.y.z]" up to the next "## [" heading (plain text match: dots and brackets are literal).
+          awk -v h="## [$version]" 'index($0, h) == 1 {on=1; next} on && index($0, "## [") == 1 {exit} on {print}' CHANGELOG.md > notes.md
           gh release create "$GITHUB_REF_NAME" --title "AgentTiles $version" --notes-file notes.md
