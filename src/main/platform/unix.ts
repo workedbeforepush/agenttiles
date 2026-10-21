@@ -89,7 +89,8 @@ export function mergePath(current: string, shell: string): string {
 export async function adoptLoginShellPath(): Promise<void> {
   const shell = process.env['SHELL'] ?? '/bin/sh';
   try {
-    const output = await run(shell, ['-ilc', `printf '%s' "${MARK}$PATH${MARK}"`], 10_000);
+    // ${PATH} with braces: "$PATH__X" would be read as a variable named PATH__X.
+    const output = await run(shell, ['-ilc', `printf '%s' "${MARK}\${PATH}${MARK}"`], 10_000);
     const path = parseShellPath(output);
     if (path) process.env['PATH'] = mergePath(process.env['PATH'] ?? '', path);
   } catch {
