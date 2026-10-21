@@ -404,6 +404,7 @@ export function snapshot(now: number, progress: DemoProgress = { approved: false
 
 export function settingsView(): SettingsView {
   return {
+    version: '0.1.0',
     settings: { ...DEFAULT_SETTINGS, theme: 'dark' },
     hiddenProjects: [],
     hiddenSessions: [],

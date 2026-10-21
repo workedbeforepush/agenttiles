@@ -2,5 +2,6 @@ node_modules/
 out/
 *.log
 .svelte-check/
-# private design notes, kept locally only
-DESIGN.md
+# private notes and plans (design notes, plans): never committed
+private/
+*.tgz

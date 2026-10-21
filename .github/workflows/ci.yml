@@ -67,3 +67,46 @@ jobs:
           name: ui-screenshots-${{ runner.os }}
           path: docs/images/
           retention-days: 14
+
+  package:
+    name: npm package (${{ matrix.os }})
+    # Installs the packed npm package like a user would (in a temporary prefix), checks that every part of the app
+    # is in it, and runs its command: --version and --uninstall (which edits a test settings.json).
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - run: npm pack
+      - name: Install into a temporary prefix
+        run: npm install -g --prefix "$RUNNER_TEMP/npm" ./agenttiles-*.tgz
+      - name: Package contains the app
+        run: |
+          pkg="$RUNNER_TEMP/npm/lib/node_modules/agenttiles"; [ "$RUNNER_OS" = Windows ] && pkg="$RUNNER_TEMP/npm/node_modules/agenttiles"
+          for f in out/main/index.js out/preload/index.js out/renderer/index.html out/hook/agenttiles-hook.js out/cli/uninstall.js resources/icon.ico resources/icon.png; do
+            test -f "$pkg/$f" || { echo "missing $f"; exit 1; }
+          done
+      - name: agenttiles --version
+        run: |
+          bin="$RUNNER_TEMP/npm/bin"; [ "$RUNNER_OS" = Windows ] && bin="$RUNNER_TEMP/npm"
+          test "$("$bin/agenttiles" --version)" = "$(node -p "require('./package.json').version")"
+      - name: agenttiles --uninstall
+        env:
+          CLAUDE_CONFIG_DIR: ${{ runner.temp }}/claude
+        run: |
+          mkdir -p "$CLAUDE_CONFIG_DIR" && echo '{}' > "$CLAUDE_CONFIG_DIR/settings.json"
+          bin="$RUNNER_TEMP/npm/bin"; [ "$RUNNER_OS" = Windows ] && bin="$RUNNER_TEMP/npm"
+          "$bin/agenttiles" --uninstall

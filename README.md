@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="resources/icon.png" width="96" alt="AgentTiles logo">
+<img src="https://raw.githubusercontent.com/workedbeforepush/agenttiles/main/resources/icon.png" width="96" alt="AgentTiles logo">
 
 # AgentTiles
 
@@ -13,7 +13,7 @@ they want. Approve, answer and jump straight to the right terminal.
 ![Electron](https://img.shields.io/badge/Electron-45-47848f)
 ![Svelte](https://img.shields.io/badge/Svelte-5-ff3e00)
 
-<img src="docs/images/demo.gif" width="900" alt="AgentTiles: allowing an edit on a tile and answering a question in the dashboard">
+<img src="https://raw.githubusercontent.com/workedbeforepush/agenttiles/main/docs/images/demo.gif" width="900" alt="AgentTiles: allowing an edit on a tile and answering a question in the dashboard">
 
 </div>
 
@@ -30,7 +30,7 @@ in any terminal or IDE. You don't have to start them in a special way.
 
 ## Features
 
-<img src="docs/images/dashboard.png" alt="The AgentTiles dashboard with eight sessions and the needs-you banner">
+<img src="https://raw.githubusercontent.com/workedbeforepush/agenttiles/main/docs/images/dashboard.png" alt="The AgentTiles dashboard with eight sessions and the needs-you banner">
 
 **See everything at a glance**
 - One live tile per session: state (working, approve?, question, plan ready, ready, compacting, limit hit, error),
@@ -52,7 +52,7 @@ in any terminal or IDE. You don't have to start them in a special way.
 
 | Review a change | Answer a question |
 |---|---|
-| <img src="docs/images/review-diff.png" alt="Diff review dialog"> | <img src="docs/images/question.png" alt="Question dialog"> |
+| <img src="https://raw.githubusercontent.com/workedbeforepush/agenttiles/main/docs/images/review-diff.png" alt="Diff review dialog"> | <img src="https://raw.githubusercontent.com/workedbeforepush/agenttiles/main/docs/images/question.png" alt="Question dialog"> |
 
 **Never miss a moment**
 - Distinct sound cues per state, adjustable volume, and system notifications.
@@ -67,7 +67,7 @@ in any terminal or IDE. You don't have to start them in a special way.
 
 | Stats | Start or resume a session |
 |---|---|
-| <img src="docs/images/stats.png" alt="Stats with cost and working time per day and project"> | <img src="docs/images/new-session.png" alt="New session and resume dialog"> |
+| <img src="https://raw.githubusercontent.com/workedbeforepush/agenttiles/main/docs/images/stats.png" alt="Stats with cost and working time per day and project"> | <img src="https://raw.githubusercontent.com/workedbeforepush/agenttiles/main/docs/images/new-session.png" alt="New session and resume dialog"> |
 
 **Made for many sessions**
 - Filter by state with a click on the header counters, group tiles by project, or switch to a compact list.
@@ -75,20 +75,19 @@ in any terminal or IDE. You don't have to start them in a special way.
 - Start a new session in any recent project, or **resume** an ended one, in a new terminal tab.
 - Pin, rename, reorder by drag and drop, hide sessions or whole projects.
 
-<img src="docs/images/list-view.png" alt="List view grouped by project">
+<img src="https://raw.githubusercontent.com/workedbeforepush/agenttiles/main/docs/images/list-view.png" alt="List view grouped by project">
 
 ## Quick start
-
-> Installers are not published yet. Until then, run AgentTiles from source. It takes about a minute.
 
 Requirements: [Node.js](https://nodejs.org) 22 or later, and Claude Code.
 
 ```sh
-git clone https://github.com/workedbeforepush/agenttiles.git
-cd agenttiles
-npm install
-npm start
+npm install -g agenttiles
+agenttiles
 ```
+
+The `agenttiles` command starts the app and returns right away; the terminal can be closed. The very first start
+downloads Electron (about 100 MB) and takes a little longer. Run it again to bring the window to the front. AgentTiles checks npm for new versions and offers **Update and restart** in its header.
 
 On first start, AgentTiles asks whether to install its **hooks** and the **statusline wrapper** in
 `~/.claude/settings.json`:
@@ -192,12 +191,25 @@ It is what the session would cost at API prices, as reported by Claude Code. On 
 this amount; the plan limits in the header are what matters there.
 
 **How do I remove everything?**
-Turn off hooks and the statusline in Settings, quit AgentTiles and delete the folder. Its own data lives in
-`%APPDATA%\agenttiles` (Windows) or the platform's equivalent.
+
+```sh
+agenttiles --uninstall      # removes the hooks and the statusline from ~/.claude/settings.json
+npm uninstall -g agenttiles
+```
+
+AgentTiles' own data (settings, stats) lives in `%APPDATA%\agenttiles` on Windows,
+`~/Library/Application Support/agenttiles` on macOS and `~/.config/agenttiles` on Linux; delete that folder too if
+you want nothing left.
 
 ## Development
 
+Run from source:
+
 ```sh
+git clone https://github.com/workedbeforepush/agenttiles.git
+cd agenttiles
+npm install
+npm start             # build and run
 npm run dev           # development with hot reload
 npm run typecheck     # TypeScript 7 for main and renderer, svelte-check for .svelte files
 npm test              # vitest
@@ -212,7 +224,7 @@ start reading; see [CONTRIBUTING.md](CONTRIBUTING.md) for the project layout.
 
 ## Roadmap
 
-- Installers (MSIX for Windows, with the native taskbar badge; DMG; AppImage)
+- Installers on GitHub Releases, winget and Homebrew
 - Confirm macOS and Linux on real machines and drop the "experimental" label
 - Exact tab selection in more terminals (WezTerm, kitty, tmux) and IDE terminals
 

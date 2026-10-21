@@ -28,6 +28,11 @@ const api: AgentTilesApi = {
     ipcRenderer.send('status:icons', trayPng, tooltip, taskbarBadgePng, waiting),
   runDoctor: () => ipcRenderer.invoke('doctor:run'),
   getStats: (days) => ipcRenderer.invoke('stats:get', days),
+  getUpdate: () => ipcRenderer.invoke('update:get'),
+  onUpdate: (listener) => {
+    ipcRenderer.on('update', (_event, update) => listener(update));
+  },
+  runUpdate: () => ipcRenderer.invoke('update:run'),
   recentSessions: () => ipcRenderer.invoke('sessions:recent'),
   launchSession: (cwd, sessionId) => ipcRenderer.invoke('sessions:launch', cwd, sessionId),
   pickFolder: () => ipcRenderer.invoke('dialog:folder'),

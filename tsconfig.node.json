@@ -12,5 +12,5 @@
     "isolatedModules": true,
     "noEmit": true
   },
-  "include": ["src/core/**/*", "src/hook/**/*", "src/main/**/*", "src/preload/**/*", "test/**/*", "electron.vite.config.ts"]
+  "include": ["src/core/**/*", "src/hook/**/*", "src/cli/**/*", "src/main/**/*", "src/preload/**/*", "test/**/*", "electron.vite.config.ts"]
 }

@@ -24,21 +24,34 @@
   },
   "license": "MIT",
   "author": "workedbeforepush",
-  "private": true,
   "engines": {
     "node": ">=22"
   },
   "main": "./out/main/index.js",
+  "bin": {
+    "agenttiles": "bin/agenttiles.js"
+  },
+  "files": [
+    "bin/",
+    "out/main/",
+    "out/preload/",
+    "out/renderer/",
+    "out/hook/",
+    "resources/",
+    "out/cli/"
+  ],
   "scripts": {
-    "build:hook": "node scripts/build-hook.mjs",
-    "dev": "npm run build:hook && electron-vite dev",
-    "build": "npm run build:hook && electron-vite build",
+    "build:node": "node scripts/build-node.mjs",
+    "dev": "npm run build:node && electron-vite dev",
+    "build": "npm run build:node && electron-vite build",
     "start": "npm run build && electron-vite preview",
     "typecheck": "node node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.node.json && node node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.web.json && svelte-check --tsconfig ./tsconfig.web.json --tsgo --threshold warning",
     "test": "vitest run",
-    "screenshots": "npm run build && node scripts/screenshots/build.mjs && electron out/screenshots/main.cjs"
+    "screenshots": "npm run build && node scripts/screenshots/build.mjs && electron out/screenshots/main.cjs",
+    "prepack": "npm run build"
   },
   "dependencies": {
+    "electron": "45.0.0",
     "koffi": "3.3.3",
     "smol-toml": "1.9.1"
   },
@@ -46,7 +59,6 @@
     "@sveltejs/vite-plugin-svelte": "7.3.1",
     "@types/node": "26.6.5",
     "@typescript/native": "npm:typescript@7.0.2",
-    "electron": "45.0.0",
     "electron-vite": "6.0.0",
     "esbuild": "0.28.2",
     "gifenc": "1.0.3",
