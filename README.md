@@ -13,7 +13,7 @@ they want. Approve, answer and jump straight to the right terminal.
 ![Electron](https://img.shields.io/badge/Electron-45-47848f)
 ![Svelte](https://img.shields.io/badge/Svelte-5-ff3e00)
 
-<img src="docs/images/demo.gif" width="800" alt="ccdash: allowing an edit on a tile and answering a question in the dashboard">
+<img src="docs/images/demo.gif" width="900" alt="ccdash: allowing an edit on a tile and answering a question in the dashboard">
 
 </div>
 

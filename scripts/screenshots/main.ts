@@ -18,7 +18,13 @@ const HEIGHT = 900;
  * rendering ignores the device scale factor, so the window is SCALE times larger and the page zoomed by SCALE.
  */
 const SCALE = 1.5;
-const GIF_WIDTH = 800;
+/**
+ * The animation gets its own narrower window (three tile columns) and is rendered at its final size: scaling a
+ * capture down blurs small text, which a 256-colour GIF then makes worse.
+ */
+const GIF_WIDTH = 960;
+const GIF_HEIGHT = 680;
+const GIF_SCALE = 1.25;
 /** Frames closer together than this are skipped: smaller file, still smooth enough for a pointer moving. */
 const GIF_FRAME_MS = 110;
 
@@ -77,9 +83,9 @@ const js = <T>(code: string): Promise<T> => win.webContents.executeJavaScript(co
 const CONTENT_BOTTOM = `Math.ceil(Math.max(...[...document.querySelectorAll('.tile, .dialog, .panel')].map((e) => e.getBoundingClientRect().bottom)) + 24)`;
 
 /** The top `height` CSS pixels of a capture (captures with a rectangle fail with UnknownVizError on this setup). */
-function cropTo(image: NativeImage, height: number): NativeImage {
+function cropTo(image: NativeImage, height: number, scale = SCALE): NativeImage {
   const size = image.getSize();
-  return image.crop({ x: 0, y: 0, width: size.width, height: Math.min(size.height, Math.round(height * SCALE)) });
+  return image.crop({ x: 0, y: 0, width: size.width, height: Math.min(size.height, Math.round(height * scale)) });
 }
 
 async function capture(name: string): Promise<NativeImage> {
@@ -113,7 +119,7 @@ const CURSOR = `(() => {
   const c = document.createElement('div');
   c.id = 'demo-cursor';
   c.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M4 2l16 10-7 1.5L9.5 21z" fill="#fff" stroke="#111" stroke-width="1.5" stroke-linejoin="round"/></svg>';
-  Object.assign(c.style, { position: 'fixed', left: '760px', top: '640px', zIndex: 9999, pointerEvents: 'none',
+  Object.assign(c.style, { position: 'fixed', left: '55%', top: '75%', zIndex: 9999, pointerEvents: 'none',
     transition: 'left 0.9s cubic-bezier(.4,0,.2,1), top 0.9s cubic-bezier(.4,0,.2,1), transform 0.12s' });
   document.body.appendChild(c);
 })()`;
@@ -127,9 +133,18 @@ const moveTo = (selector: string): string => `(() => {
 
 const PRESS = `(() => { const c = document.getElementById('demo-cursor'); c.style.transform = 'scale(0.8)'; setTimeout(() => c.style.transform = '', 140); })()`;
 
+interface PendingFrame {
+  rgba: Uint8Array;
+  width: number;
+  height: number;
+  delay: number;
+}
+
 class Recorder {
   private readonly gif = GIFEncoder();
   private last = Date.now();
+  /** The newest frame, written once the next one differs: identical frames merge into one longer frame. */
+  private pending: PendingFrame | null = null;
 
   constructor(private readonly height: number) {}
 
@@ -144,10 +159,7 @@ class Recorder {
   }
 
   async frame(hold = 0): Promise<void> {
-    const image = cropTo(await win.webContents.capturePage(), this.height).resize({
-      width: GIF_WIDTH,
-      quality: 'best',
-    });
+    const image = cropTo(await win.webContents.capturePage(), this.height, GIF_SCALE);
     const { width, height } = image.getSize();
     const bgra = image.toBitmap();
     const rgba = new Uint8Array(bgra.length);
@@ -158,12 +170,26 @@ class Recorder {
       rgba[i + 3] = 255;
     }
     const now = Date.now();
-    const palette = quantize(rgba, 128);
-    this.gif.writeFrame(applyPalette(rgba, palette), width, height, { palette, delay: Math.max(40, now - this.last) + hold });
+    const delay = Math.max(40, now - this.last) + hold;
     this.last = now + hold;
+    if (this.pending && Buffer.compare(this.pending.rgba, rgba) === 0) {
+      this.pending.delay += delay;
+      return;
+    }
+    this.flush();
+    this.pending = { rgba, width, height, delay };
+  }
+
+  private flush(): void {
+    const frame = this.pending;
+    if (!frame) return;
+    const palette = quantize(frame.rgba, 256);
+    this.gif.writeFrame(applyPalette(frame.rgba, palette), frame.width, frame.height, { palette, delay: frame.delay });
+    this.pending = null;
   }
 
   save(name: string): void {
+    this.flush();
     this.gif.finish();
     writeFileSync(join(OUT, name), this.gif.bytes());
     console.log(`docs/images/${name}`);
@@ -172,9 +198,12 @@ class Recorder {
 
 async function animation(): Promise<void> {
   progress = { approved: false, answered: false };
+  win.setContentSize(GIF_WIDTH * GIF_SCALE, GIF_HEIGHT * GIF_SCALE);
+  win.webContents.setZoomFactor(GIF_SCALE);
   push();
-  await sleep(600);
-  const rec = new Recorder(Math.min(HEIGHT, await js<number>(CONTENT_BOTTOM)));
+  await sleep(1000);
+  // Full window height: the question dialog in the second half of the story reaches below the first tile row.
+  const rec = new Recorder(GIF_HEIGHT);
   await rec.frame(1200);
   await js(CURSOR);
   // 1. Allow an edit right on the tile.
