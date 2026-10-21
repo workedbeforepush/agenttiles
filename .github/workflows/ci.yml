@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
+        os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     env:
@@ -43,7 +43,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
+        os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     steps:
@@ -76,7 +76,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
+        os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     defaults:
@@ -111,3 +111,39 @@ jobs:
           mkdir -p "$CLAUDE_CONFIG_DIR" && echo '{}' > "$CLAUDE_CONFIG_DIR/settings.json"
           bin="$RUNNER_TEMP/npm/bin"; [ "$RUNNER_OS" = Windows ] && bin="$RUNNER_TEMP/npm"
           "$bin/agenttiles" --uninstall
+
+  macos:
+    name: macOS (not required)
+    # GitHub's free macOS runners are scarce and often queue for a long time, so macOS runs everything above in one
+    # job and is not a required check: its result shows on the pull request without blocking the merge.
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - name: UI smoke test
+        run: npm run screenshots
+      - name: npm package
+        run: |
+          npm pack
+          npm install -g --prefix "$RUNNER_TEMP/npm" ./agenttiles-*.tgz
+          pkg="$RUNNER_TEMP/npm/lib/node_modules/agenttiles"
+          for f in out/main/index.js out/preload/index.js out/renderer/index.html out/hook/agenttiles-hook.js out/cli/uninstall.js resources/icon.ico resources/icon.png; do
+            test -f "$pkg/$f" || { echo "missing $f"; exit 1; }
+          done
+          test "$("$RUNNER_TEMP/npm/bin/agenttiles" --version)" = "$(node -p "require('./package.json').version")"
+          export CLAUDE_CONFIG_DIR="$RUNNER_TEMP/claude"
+          mkdir -p "$CLAUDE_CONFIG_DIR" && echo '{}' > "$CLAUDE_CONFIG_DIR/settings.json"
+          "$RUNNER_TEMP/npm/bin/agenttiles" --uninstall
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: ui-screenshots-macOS
+          path: docs/images/
+          retention-days: 14
