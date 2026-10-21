@@ -298,7 +298,7 @@
     lastTray = tooltip;
     void window.ccdash.iconPixelSize().then(async (size) => {
       const icon = await paintTrayIcon(count, size);
-      window.ccdash.setStatusIcons(icon, tooltip, paintTaskbarBadge(count, size), `${count} waiting`);
+      window.ccdash.setStatusIcons(icon, tooltip, paintTaskbarBadge(count, size), count);
     });
   });
 </script>

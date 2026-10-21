@@ -24,5 +24,9 @@ First public version.
 - Status filter, grouping by project, list view, fixed tile sizes with paging, full screen.
 - Configurable keyboard shortcuts, pin, rename, drag-and-drop order, hide sessions and projects.
 - Diagnostics panel.
+- macOS (experimental): jump to the exact tab in Terminal.app and iTerm2, other host apps come to the front; start
+  and resume sessions in iTerm2 or Terminal.app; Dock badge; PATH taken from the login shell.
+- Linux (experimental): jump to the terminal window on X11 with xdotool; start and resume sessions in the first
+  installed terminal; launcher count; XDG autostart.
 
 [Unreleased]: https://github.com/workedbeforepush/ccdash/commits/main

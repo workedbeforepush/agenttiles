@@ -47,15 +47,15 @@ in any terminal or IDE. You don't have to start them in a special way.
 - **Answer questions** (AskUserQuestion) in a dialog modelled on the terminal's, with tabs, options, free text and
   the same keys.
 - **Read plans** rendered as Markdown before you decide in the terminal.
-- **Jump to the terminal**: a click focuses the right Windows Terminal tab, even across several windows. A second
-  click sends it away again.
+- **Jump to the terminal**: a click focuses the session's terminal: the exact tab in Windows Terminal (even across
+  windows), Terminal.app or iTerm2, or the terminal window on Linux.
 
 | Review a change | Answer a question |
 |---|---|
 | <img src="docs/images/review-diff.png" alt="Diff review dialog"> | <img src="docs/images/question.png" alt="Question dialog"> |
 
 **Never miss a moment**
-- Distinct sound cues per state, adjustable volume, and Windows toasts.
+- Distinct sound cues per state, adjustable volume, and system notifications.
 - A repeated reminder while a session keeps waiting.
 - A warning before the context window fills up.
 - The tray icon and taskbar button show how many sessions wait for you.
@@ -72,7 +72,7 @@ in any terminal or IDE. You don't have to start them in a special way.
 **Made for many sessions**
 - Filter by state with a click on the header counters, group tiles by project, or switch to a compact list.
 - Fixed tile sizes with paging, full screen and keyboard control (all shortcuts configurable).
-- Start a new session in any recent project, or **resume** an ended one, in a new Windows Terminal tab.
+- Start a new session in any recent project, or **resume** an ended one, in a new terminal tab.
 - Pin, rename, reorder by drag and drop, hide sessions or whole projects.
 
 <img src="docs/images/list-view.png" alt="List view grouped by project">
@@ -141,14 +141,23 @@ flowchart LR
 
 ## Platform support
 
-| | Windows 10/11 | macOS | Linux |
-|---|:-:|:-:|:-:|
+| | Windows 10/11 | macOS 🧪 | Linux 🧪 |
+|---|---|---|---|
 | Live tiles, approvals, questions, limits, stats | ✅ | ✅ | ✅ |
-| Jump to terminal (focus / minimize) | ✅ Windows Terminal, any window | — | — |
-| Start / resume sessions | ✅ Windows Terminal | — | — |
-| Toasts, tray, taskbar badge | ✅ | partly | partly |
+| Jump to the session's terminal | ✅ exact Windows Terminal tab, any window; click again to minimize | ✅ exact tab in Terminal.app and iTerm2; other apps (VS Code, JetBrains, Ghostty, …) come to the front | ✅ the terminal window, on X11 with `xdotool` (Wayland does not allow it) |
+| Start / resume sessions | ✅ Windows Terminal | ✅ iTerm2, else Terminal.app | ✅ first installed of gnome-terminal, konsole, kitty, wezterm, alacritty, ghostty, xfce4-terminal, tilix, foot, xterm |
+| Waiting count outside the window | ✅ tray + taskbar badge | ✅ menu bar + Dock badge | ✅ tray + launcher count (where the desktop supports it) |
+| Start with system login | ✅ | ✅ | ✅ XDG autostart |
 
-Windows is where ccdash is used every day. macOS and Linux run but get less testing; contributions are welcome.
+🧪 **macOS and Linux are new and experimental.** Their logic is unit-tested and CI runs the UI on both, but the
+terminal integration has not been tried on real machines yet. Feedback in the
+[issues](https://github.com/workedbeforepush/ccdash/issues) is very welcome.
+
+Notes:
+- **macOS:** the first jump to a Terminal.app or iTerm2 tab asks whether ccdash may control that app (System
+  Settings → Privacy & Security → Automation). ccdash takes the `PATH` from your login shell, so `node` and
+  `claude` from Homebrew, nvm or Claude's installer are found even when ccdash starts from the Dock.
+- **Linux:** install `xdotool` for the terminal jump (`sudo apt install xdotool` or your distribution's package).
 
 ## Keyboard
 
@@ -204,8 +213,8 @@ start reading; see [CONTRIBUTING.md](CONTRIBUTING.md) for the project layout.
 ## Roadmap
 
 - Installers (MSIX for Windows, with the native taskbar badge; DMG; AppImage)
-- Jump to terminal on macOS (iTerm2, Terminal.app) and Linux
-- More terminals for "jump" and "start" (VS Code, JetBrains, tmux)
+- Confirm macOS and Linux on real machines and drop the "experimental" label
+- Exact tab selection in more terminals (WezTerm, kitty, tmux) and IDE terminals
 
 Ideas and votes are welcome in [Discussions](https://github.com/workedbeforepush/ccdash/discussions) and
 [Issues](https://github.com/workedbeforepush/ccdash/issues).

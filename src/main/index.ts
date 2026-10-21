@@ -33,7 +33,7 @@ import { initLog, log, setLogLevel } from './log';
 import { Notifier } from './notifier';
 import { Attention } from './attention';
 import { launchSession, recentSessions } from './launcher';
-import { focusSession, initPlatform, registerAppIdentity } from './platform';
+import { focusSession, initPlatform, registerAppIdentity, setLinuxAutostart } from './platform';
 import { APP_ID, APP_ICON_PNG, APP_NAME } from './appId';
 import { SessionStore } from './store';
 import { AppTray } from './tray';
@@ -142,6 +142,8 @@ async function start(): Promise<void> {
     ].filter((t): t is string => t !== null);
     const result = await focusSession(rec.sessionId, reg.pid, titles);
     if (result === 'unsupported') notifier.info('ccdash', 'Focus jump is not supported on this OS.');
+    else if (result === 'noX11') notifier.info('ccdash', 'Focus jump needs an X11 session; Wayland does not let apps raise windows.');
+    else if (result === 'noXdotool') notifier.info('ccdash', 'Focus jump needs xdotool. Install it with your package manager.');
     else if (result === 'notFound') notifier.info('ccdash', `No terminal window found for ${rec.sessionId}.`);
   }
 
@@ -167,7 +169,11 @@ async function start(): Promise<void> {
     nativeTheme.themeSource = s.theme;
     win.setAlwaysOnTop(s.alwaysOnTop);
     setLogLevel(s.logLevel);
-    if (process.platform !== 'linux') app.setLoginItemSettings({ openAtLogin: s.autostart });
+    if (process.platform === 'linux') {
+      setLinuxAutostart(s.autostart, app.isPackaged ? [process.execPath] : [process.execPath, app.getAppPath()]);
+    } else {
+      app.setLoginItemSettings({ openAtLogin: s.autostart });
+    }
     if (!previous || previous.hotkeyEnabled !== s.hotkeyEnabled || previous.hotkey !== s.hotkey) applyHotkey();
     if (previous && previous.permissionTimeoutSec !== s.permissionTimeoutSec) {
       integration.repair(s.permissionTimeoutSec);
@@ -312,13 +318,23 @@ async function start(): Promise<void> {
   ipcMain.handle('window:isFullscreen', () => win.isFullScreen());
   win.on('enter-full-screen', () => win.webContents.send('fullscreen', true));
   win.on('leave-full-screen', () => win.webContents.send('fullscreen', false));
+  /** The waiting count outside the window: taskbar overlay (Windows), Dock badge (macOS), launcher count (Linux). */
+  function showWaitingCount(badgePng: string | null, count: number): void {
+    if (process.platform === 'win32') {
+      const badge = typeof badgePng === 'string' ? nativeImage.createFromDataURL(badgePng) : null;
+      if (!win.isDestroyed()) win.setOverlayIcon(badge && !badge.isEmpty() ? badge : null, `${count} waiting`);
+    } else if (process.platform === 'darwin') {
+      app.dock?.setBadge(count > 0 ? String(count) : '');
+    } else {
+      app.setBadgeCount(count);
+    }
+  }
+
   ipcMain.handle('icons:size', () => Math.round(16 * screen.getPrimaryDisplay().scaleFactor));
-  ipcMain.on('status:icons', (_e, trayPng: string, tooltip: string, badgePng: string | null, badgeText: string) => {
+  ipcMain.on('status:icons', (_e, trayPng: string, tooltip: string, badgePng: string | null, waiting: number) => {
     const trayImage = nativeImage.createFromDataURL(trayPng);
     if (!trayImage.isEmpty()) tray.setIcon(trayImage, tooltip);
-    // Windows only: the badge over the taskbar button. Other platforms ignore it.
-    const badge = typeof badgePng === 'string' ? nativeImage.createFromDataURL(badgePng) : null;
-    if (!win.isDestroyed()) win.setOverlayIcon(badge && !badge.isEmpty() ? badge : null, badgeText);
+    showWaitingCount(badgePng, typeof waiting === 'number' ? waiting : 0);
   });
   ipcMain.handle('doctor:run', () =>
     runDoctor(
@@ -329,6 +345,8 @@ async function start(): Promise<void> {
   );
 
   app.on('second-instance', showWindow);
+  // macOS: a click on the Dock icon brings the window back.
+  app.on('activate', showWindow);
   app.on('before-quit', () => {
     quitting = true;
     server.stop();

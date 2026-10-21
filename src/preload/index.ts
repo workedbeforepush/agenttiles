@@ -24,8 +24,8 @@ const api: CcdashApi = {
   decidePermission: (id, request) => ipcRenderer.invoke('permission:decide', id, request),
   answerQuestion: (id, answers) => ipcRenderer.invoke('permission:answer', id, answers),
   iconPixelSize: () => ipcRenderer.invoke('icons:size'),
-  setStatusIcons: (trayPng, tooltip, taskbarBadgePng, badgeText) =>
-    ipcRenderer.send('status:icons', trayPng, tooltip, taskbarBadgePng, badgeText),
+  setStatusIcons: (trayPng, tooltip, taskbarBadgePng, waiting) =>
+    ipcRenderer.send('status:icons', trayPng, tooltip, taskbarBadgePng, waiting),
   runDoctor: () => ipcRenderer.invoke('doctor:run'),
   getStats: (days) => ipcRenderer.invoke('stats:get', days),
   recentSessions: () => ipcRenderer.invoke('sessions:recent'),

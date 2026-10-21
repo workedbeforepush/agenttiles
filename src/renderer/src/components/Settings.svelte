@@ -162,8 +162,8 @@
         </select>
       </label>
       <label class="row">
-        <input type="checkbox" checked={s.autostart} disabled={view.platform === 'linux'} onchange={checkbox('autostart')} />
-        Start with system login {#if view.platform === 'linux'}<small>(not supported on Linux)</small>{/if}
+        <input type="checkbox" checked={s.autostart} onchange={checkbox('autostart')} />
+        Start with system login
       </label>
     </section>
 

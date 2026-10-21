@@ -65,7 +65,7 @@ export async function runDoctor(
     }
   }
   const registered = new Set(rows.map((r) => r.pid));
-  const processes = claudeProcesses();
+  const processes = await claudeProcesses();
   const unregisteredPids = processes === null ? null : processes.filter((pid) => !registered.has(pid));
   return { rows, unregisteredPids, agentsError, ipcListening: ipc.listening, ipcPath: ipc.path, integration, claudeVersion };
 }

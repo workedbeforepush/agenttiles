@@ -34,7 +34,7 @@ export interface CcdashApi {
    */
   iconPixelSize(): Promise<number>;
   /** Tray icon and tooltip, and the taskbar overlay badge (null removes it). */
-  setStatusIcons(trayPng: string, tooltip: string, taskbarBadgePng: string | null, badgeText: string): void;
+  setStatusIcons(trayPng: string, tooltip: string, taskbarBadgePng: string | null, waiting: number): void;
   setOrder(sessionIds: string[]): Promise<void>;
   toggleFullscreen(): Promise<void>;
   isFullscreen(): Promise<boolean>;
