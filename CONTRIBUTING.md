@@ -60,6 +60,13 @@ npm run typecheck
 npm test
 ```
 
+## Releasing (maintainers)
+
+1. Move the `[Unreleased]` entries in `CHANGELOG.md` under a new `## [x.y.z] - YYYY-MM-DD` heading and commit.
+2. `npm version x.y.z` (sets `package.json`, commits, tags `vx.y.z`), then `git push --follow-tags`.
+3. The `Release` workflow checks that the tag matches `package.json`, runs the checks, publishes to npm with
+   provenance (trusted publishing, no token) and creates the GitHub release from the changelog section.
+
 ## Commit messages
 
 Imperative mood, describing what the change does: "Add stats panel", "Fix focus jump across terminal windows".

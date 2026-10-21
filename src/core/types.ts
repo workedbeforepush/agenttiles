@@ -254,7 +254,22 @@ export interface IntegrationStatus {
   error: string | null;
 }
 
+/** A newer AgentTiles on npm, and how to get it. */
+export interface UpdateView {
+  current: string;
+  /** The newer version, or null when this is the latest one. */
+  available: string | null;
+  /** The command that updates, for installs AgentTiles cannot update itself. */
+  command: string;
+  /** True for a global npm install: AgentTiles runs the update itself. */
+  canInstall: boolean;
+  /** The end of npm's output when the last update from the app failed. */
+  failed: string | null;
+}
+
 export interface SettingsView {
+  /** AgentTiles' own version. */
+  version: string;
   settings: Settings;
   hiddenProjects: string[];
   hiddenSessions: HiddenSession[];

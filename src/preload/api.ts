@@ -4,6 +4,7 @@ import type {
   DoctorReport,
   LaunchView,
   SettingsPatch,
+  UpdateView,
   SettingsView,
   Snapshot,
   StatsView,
@@ -50,6 +51,11 @@ export interface AgentTilesApi {
   launchSession(cwd: string, sessionId: string | null): Promise<string | null>;
   /** Folder picker; null when cancelled. */
   pickFolder(): Promise<string | null>;
+  getUpdate(): Promise<UpdateView>;
+  /** Sent after each update check (at start and every 6 hours). */
+  onUpdate(listener: (update: UpdateView) => void): void;
+  /** Starts the update (global npm install) or shows how to update by hand. */
+  runUpdate(): Promise<void>;
   /** Statistics of the last 7 or 30 days. */
   getStats(days: 7 | 30): Promise<StatsView>;
 }

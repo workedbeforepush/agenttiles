@@ -67,3 +67,40 @@ jobs:
           name: ui-screenshots-${{ runner.os }}
           path: docs/images/
           retention-days: 14
+
+  package:
+    name: npm package (${{ matrix.os }})
+    # Installs the packed npm package like a user would (in a temporary prefix) and runs its command:
+    # --version (the bin script) and --uninstall (Electron starts the packaged main process and edits settings).
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - run: npm pack
+      - name: Install into a temporary prefix
+        run: npm install -g --prefix "$RUNNER_TEMP/npm" ./agenttiles-*.tgz
+      - name: agenttiles --version
+        run: |
+          bin="$RUNNER_TEMP/npm/bin"; [ "$RUNNER_OS" = Windows ] && bin="$RUNNER_TEMP/npm"
+          test "$("$bin/agenttiles" --version)" = "$(node -p "require('./package.json').version")"
+      - name: agenttiles --uninstall
+        env:
+          CLAUDE_CONFIG_DIR: ${{ runner.temp }}/claude
+        run: |
+          mkdir -p "$CLAUDE_CONFIG_DIR" && echo '{}' > "$CLAUDE_CONFIG_DIR/settings.json"
+          bin="$RUNNER_TEMP/npm/bin"; [ "$RUNNER_OS" = Windows ] && bin="$RUNNER_TEMP/npm"
+          if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a "$bin/agenttiles" --uninstall; else "$bin/agenttiles" --uninstall; fi

@@ -339,8 +339,9 @@
       {/each}
     </section>
 
-    <section>
+    <section class="about">
       <button class="secondary" onclick={onDoctor}>Open diagnostics</button>
+      <span class="version">AgentTiles {view.version}</span>
     </section>
   </div>
 </div>
@@ -499,6 +500,17 @@
   .conflict-note {
     display: inline !important;
     color: var(--st-error) !important;
+  }
+
+  .about {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .version {
+    color: var(--muted);
+    font-size: 12px;
   }
 
   .inline-hint {

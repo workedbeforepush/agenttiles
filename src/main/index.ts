@@ -34,8 +34,9 @@ import { Notifier } from './notifier';
 import { Attention } from './attention';
 import { launchSession, recentSessions } from './launcher';
 import { focusSession, initPlatform, registerAppIdentity, setLinuxAutostart } from './platform';
-import { APP_ID, APP_ICON_PNG, APP_NAME } from './appId';
+import { APP_ID, APP_NAME, persistentIcons } from './appId';
 import { SessionStore } from './store';
+import { Updater } from './updater';
 import { AppTray } from './tray';
 import { createMainWindow } from './window';
 
@@ -46,8 +47,12 @@ process.on('unhandledRejection', (reason) => log.error('unhandled rejection', re
 const PRUNE_INTERVAL_MS = 10 * 60 * 1000;
 /** Plan limits are queried at start and then on this interval (~600 tokens per query). */
 const LIMIT_PROBE_INTERVAL_MS = 10 * 60 * 1000;
+const UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
-if (!app.requestSingleInstanceLock()) {
+if (process.argv.includes('--uninstall')) {
+  // `agenttiles --uninstall`: remove hooks and statusline, print the result and exit (no window, no lock).
+  void app.whenReady().then(uninstall);
+} else if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.setAppUserModelId(APP_ID);
@@ -57,13 +62,31 @@ if (!app.requestSingleInstanceLock()) {
   });
 }
 
+function uninstall(): void {
+  const userData = app.getPath('userData');
+  initLog(userData, 'info');
+  const integration = new Integration(userData, join(app.getAppPath(), 'out', 'hook', 'agenttiles-hook.js'));
+  integration.setStatusline(false);
+  integration.setHooks(false, 0);
+  const status = integration.status(0);
+  if (status.error) {
+    console.error(`AgentTiles could not update ~/.claude/settings.json: ${status.error}`);
+    app.exit(1);
+    return;
+  }
+  console.log('AgentTiles hooks and statusline removed from ~/.claude/settings.json.');
+  console.log('You can now run: npm uninstall -g agenttiles');
+  app.exit(0);
+}
+
 async function start(): Promise<void> {
   const userData = app.getPath('userData');
   const config = new ConfigStore(userData);
   initLog(userData, config.config.settings.logLevel);
   log.info(`AgentTiles ${app.getVersion()} starting, userData ${userData}`);
   await initPlatform();
-  registerAppIdentity(APP_ID, APP_NAME, APP_ICON_PNG);
+  const icons = persistentIcons(userData);
+  registerAppIdentity(APP_ID, APP_NAME, icons.png);
 
   const daily = new DailyStats(userData);
   const integration = new Integration(userData, join(app.getAppPath(), 'out', 'hook', 'agenttiles-hook.js'));
@@ -82,7 +105,7 @@ async function start(): Promise<void> {
     },
   };
 
-  const win: BrowserWindow = createMainWindow(config, () => !quitting);
+  const win: BrowserWindow = createMainWindow(config, () => !quitting, icons.ico);
   const showWindow = (): void => {
     if (win.isMinimized()) win.restore();
     win.show();
@@ -170,9 +193,11 @@ async function start(): Promise<void> {
     win.setAlwaysOnTop(s.alwaysOnTop);
     setLogLevel(s.logLevel);
     if (process.platform === 'linux') {
-      setLinuxAutostart(s.autostart, app.isPackaged ? [process.execPath] : [process.execPath, app.getAppPath()]);
+      // --no-sandbox like the agenttiles command: npm installs cannot set up Chromium's SUID sandbox helper.
+      setLinuxAutostart(s.autostart, [process.execPath, ...(app.isPackaged ? [] : [app.getAppPath()]), '--no-sandbox']);
     } else {
-      app.setLoginItemSettings({ openAtLogin: s.autostart });
+      // From npm or source, the executable is Electron itself: it needs the app folder as argument.
+      app.setLoginItemSettings({ openAtLogin: s.autostart, path: process.execPath, args: app.isPackaged ? [] : [app.getAppPath()] });
     }
     if (!previous || previous.hotkeyEnabled !== s.hotkeyEnabled || previous.hotkey !== s.hotkey) applyHotkey();
     if (previous && previous.permissionTimeoutSec !== s.permissionTimeoutSec) {
@@ -181,6 +206,7 @@ async function start(): Promise<void> {
   }
 
   const settingsView = (): SettingsView => ({
+    version: app.getVersion(),
     settings: settings(),
     hiddenProjects: config.config.hiddenProjects,
     hiddenSessions: store.hiddenSessionList(),
@@ -386,6 +412,44 @@ async function start(): Promise<void> {
     return probing;
   };
   ipcMain.handle('limits:refresh', () => probe());
+
+  const updater = new Updater(userData, app.getAppPath(), app.getVersion());
+  const sendUpdate = (): void => {
+    if (!win.isDestroyed()) win.webContents.send('update', updater.view());
+  };
+  const checkUpdate = (): Promise<void> => updater.check().then(sendUpdate);
+  ipcMain.handle('update:get', () => updater.view());
+  ipcMain.handle('update:run', async () => {
+    const view = updater.view();
+    if (view.available && view.canInstall && !view.failed) {
+      const { response } = await dialog.showMessageBox(win, {
+        type: 'info',
+        title: 'Update AgentTiles',
+        message: `Update AgentTiles to ${view.available}?`,
+        detail: `AgentTiles quits, runs "${view.command}" and starts again in a few seconds.`,
+        buttons: ['Update and restart', 'Later'],
+        defaultId: 0,
+        cancelId: 1,
+      });
+      if (response !== 0) return;
+      updater.install(view.available);
+      quitting = true;
+      app.quit();
+      return;
+    }
+    const { response } = await dialog.showMessageBox(win, {
+      type: view.failed ? 'warning' : 'info',
+      title: 'Update AgentTiles',
+      message: view.failed ? 'The last update did not work.' : `AgentTiles ${view.available ?? ''} is available.`,
+      detail: `${view.failed ? `npm said:\n${view.failed}\n\n` : ''}Update in a terminal with:\n${view.command}`,
+      buttons: ['Copy command', 'Close'],
+      defaultId: 0,
+      cancelId: 1,
+    });
+    if (response === 0) clipboard.writeText(view.command);
+  });
+  void checkUpdate();
+  setInterval(() => void checkUpdate(), UPDATE_CHECK_INTERVAL_MS);
   void probe();
   setInterval(() => void probe(), LIMIT_PROBE_INTERVAL_MS);
 }

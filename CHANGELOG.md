@@ -28,5 +28,7 @@ First public version.
   and resume sessions in iTerm2 or Terminal.app; Dock badge; PATH taken from the login shell.
 - Linux (experimental): jump to the terminal window on X11 with xdotool; start and resume sessions in the first
   installed terminal; launcher count; XDG autostart.
+- npm package: `npm install -g agenttiles`, then `agenttiles`; `agenttiles --uninstall` removes the hooks and the
+  statusline. AgentTiles checks npm for new versions and updates itself after a click.
 
 [Unreleased]: https://github.com/workedbeforepush/agenttiles/commits/main

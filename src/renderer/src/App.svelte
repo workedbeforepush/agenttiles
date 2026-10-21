@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import type { Settings as SettingsType, SettingsView, Snapshot, TileSize, TileView, ViewMode } from '../../core/types';
+  import type { Settings as SettingsType, SettingsView, Snapshot, TileSize, TileView, UpdateView, ViewMode } from '../../core/types';
   import Header from './components/Header.svelte';
   import Tile from './components/Tile.svelte';
   import Banner from './components/Banner.svelte';
@@ -72,6 +72,7 @@
   let showDoctor = $state(false);
   let showToday = $state(false);
   let showNewSession = $state(false);
+  let update = $state<UpdateView | null>(null);
   /** Header counters as filters; empty shows every tile. Not saved: AgentTiles always starts unfiltered. */
   let filters = $state<StatusFilter[]>([]);
   let installing = $state(false);
@@ -272,6 +273,10 @@
     });
     window.agenttiles.onFullscreen((value) => (fullscreen = value));
     window.agenttiles.onTransitions(onTransitions);
+    window.agenttiles.onUpdate((next) => {
+      update = next;
+    });
+    void window.agenttiles.getUpdate().then((initial) => (update = initial));
     void window.agenttiles.isFullscreen().then((value) => (fullscreen = value));
     void window.agenttiles.getSnapshot().then((initial) => (snapshot = initial));
     void refreshSettings();
@@ -319,6 +324,8 @@
     {grouped}
     onGroup={() => void window.agenttiles.updateSettings({ groupByProject: !grouped }).then((v) => (settingsView = v))}
     onNewSession={() => (showNewSession = true)}
+    {update}
+    onUpdate={() => void window.agenttiles.runUpdate()}
     onViewMode={(mode) => void setViewMode(mode)}
     onFullscreen={() => void window.agenttiles.toggleFullscreen()}
     onRefreshLimits={() => void refreshLimits()}

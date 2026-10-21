@@ -18,7 +18,8 @@ function onSomeDisplay(bounds: WindowBounds): boolean {
   });
 }
 
-export function createMainWindow(config: ConfigStore, shouldHideOnClose: () => boolean): BrowserWindow {
+/** `relaunchIcon`: an icon path that stays the same across updates (see persistentIcons). */
+export function createMainWindow(config: ConfigStore, shouldHideOnClose: () => boolean, relaunchIcon: string): BrowserWindow {
   const saved = config.config.window;
   const usable = saved && onSomeDisplay(saved) ? saved : null;
   const win = new BrowserWindow({
@@ -45,7 +46,7 @@ export function createMainWindow(config: ConfigStore, shouldHideOnClose: () => b
     const relaunch = app.isPackaged ? `"${process.execPath}"` : `"${process.execPath}" "${app.getAppPath()}"`;
     win.setAppDetails({
       appId: WINDOW_APP_ID,
-      appIconPath: APP_ICON,
+      appIconPath: relaunchIcon,
       relaunchCommand: relaunch,
       relaunchDisplayName: 'AgentTiles',
     });
