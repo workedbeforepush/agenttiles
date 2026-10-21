@@ -21,7 +21,7 @@ jobs:
       # Typecheck and tests never start Electron; skip the large binary download.
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 22
