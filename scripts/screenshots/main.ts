@@ -97,9 +97,19 @@ async function capture(name: string): Promise<NativeImage> {
   return image;
 }
 
+/** Polls until `check` (a JavaScript expression run in the page) is truthy; fails after 5 s (slow CI runners). */
+async function waitFor(check: string, what: string): Promise<void> {
+  const end = Date.now() + 5000;
+  while (!(await js<boolean>(`!!(${check})`))) {
+    if (Date.now() > end) throw new Error(`timed out waiting for ${what}`);
+    await sleep(100);
+  }
+}
+
 async function click(selector: string): Promise<void> {
-  const ok = await js<boolean>(`(() => { const el = document.querySelector(${JSON.stringify(selector)}); el?.click(); return !!el; })()`);
-  if (!ok) throw new Error(`nothing to click: ${selector}`);
+  const query = `document.querySelector(${JSON.stringify(selector)})`;
+  await waitFor(query, selector);
+  await js(`${query}.click()`);
   await sleep(300);
 }
 
@@ -107,9 +117,7 @@ async function click(selector: string): Promise<void> {
 async function escape(): Promise<void> {
   win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' });
   win.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' });
-  await sleep(300);
-  const open = await js<string | null>(`document.querySelector('.backdrop')?.innerText.slice(0, 40) ?? null`);
-  if (open !== null) throw new Error(`Esc did not close the dialog: ${open}`);
+  await waitFor(`!document.querySelector('.backdrop')`, 'Esc to close the dialog');
 }
 
 // ---- animated GIF -------------------------------------------------------------------------------------

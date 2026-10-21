@@ -14,11 +14,15 @@ concurrency:
 
 jobs:
   check:
-    name: Typecheck and test
-    # Windows is the main platform; macOS and Linux runners can join once the tests are verified there.
-    runs-on: windows-latest
+    name: Check (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     env:
-      # Typecheck and tests never start Electron; skip the large binary download.
+      # Typecheck, tests and the build never start Electron; skip the large binary download.
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     steps:
       - uses: actions/checkout@v5
@@ -29,3 +33,25 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      - run: npm run build
+
+  smoke:
+    name: UI smoke test
+    # Starts the real UI in Electron with demo sessions (scripts/screenshots): clicks Allow, answers a question,
+    # opens every dialog and checks that Esc closes it. Fails on any error; the rendered images are attached.
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run screenshots
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: ui-screenshots
+          path: docs/images/
+          retention-days: 14
