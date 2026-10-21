@@ -18,8 +18,7 @@ describe.skipIf(process.platform === 'win32')('unix helpers on this machine', ()
   it('takes the PATH that the login shell profile sets up', async () => {
     // Like Homebrew or nvm: the user's profile adds a directory that a Dock or launcher start would not see.
     const home = mkdtempSync(join(tmpdir(), 'ccdash-home-'));
-    writeFileSync(join(home, '.bash_profile'), 'export PATH="/ccdash-test/bin:$PATH"
-');
+    writeFileSync(join(home, '.bash_profile'), 'export PATH="/ccdash-test/bin:$PATH"\n');
     const saved = { PATH: process.env['PATH'], HOME: process.env['HOME'], SHELL: process.env['SHELL'] };
     Object.assign(process.env, { PATH: '/usr/bin:/bin', HOME: home, SHELL: '/bin/bash' });
     try {
