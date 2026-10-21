@@ -4,6 +4,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Conventional titles, like every other pull request (release-please reads them).
+    commit-message:
+      prefix: chore(deps)
     groups:
       dev-dependencies:
         dependency-type: development
@@ -14,5 +17,7 @@ updates:
         update-types: [version-update:semver-major]
   - package-ecosystem: github-actions
     directory: /
+    commit-message:
+      prefix: ci
     schedule:
       interval: monthly

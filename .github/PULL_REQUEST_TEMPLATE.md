@@ -1,3 +1,5 @@
+<!-- Title: a conventional commit, e.g. "feat: start sessions in tmux" or "fix: …" (see CONTRIBUTING.md). -->
+
 ## What and why
 
 <!-- What does this change do, and which problem does it solve? Link the issue: "Closes #123". -->

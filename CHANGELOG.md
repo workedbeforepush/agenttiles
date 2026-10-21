@@ -1,11 +1,9 @@
 # Changelog
 
-All notable changes to AgentTiles are documented here. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
+All notable changes to AgentTiles. Versions follow [Semantic Versioning](https://semver.org/); entries are written
+by release-please from the pull request titles (conventional commits).
 
-## [Unreleased]
-
-## [0.1.0] - 2026-10-21
+## [0.1.0](https://github.com/workedbeforepush/agenttiles/releases/tag/v0.1.0) (2026-10-21)
 
 First public version.
 
@@ -33,5 +31,3 @@ First public version.
 - npm package: `npm install -g agenttiles`, then `agenttiles`; `agenttiles --uninstall` removes the hooks and the
   statusline. AgentTiles checks npm for new versions and updates itself after a click.
 
-[Unreleased]: https://github.com/workedbeforepush/agenttiles/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/workedbeforepush/agenttiles/releases/tag/v0.1.0
