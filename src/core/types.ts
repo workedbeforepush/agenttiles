@@ -274,7 +274,8 @@ export interface SettingsView {
   hiddenProjects: string[];
   hiddenSessions: HiddenSession[];
   integration: IntegrationStatus;
-  firstRun: boolean;
+  /** Offer the hooks at start: they are not installed and the prompt was neither closed in this run nor turned off. */
+  askHooks: boolean;
   platform: string;
 }
 

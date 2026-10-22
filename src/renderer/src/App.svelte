@@ -128,7 +128,7 @@
       showToday ||
       showNewSession ||
       answering !== null ||
-      (settingsView?.firstRun ?? false),
+      (settingsView?.askHooks ?? false),
   );
 
   const scale = $derived(SCALE[settings?.tileSize ?? 'M']);
@@ -170,18 +170,20 @@
     settingsView = await window.agenttiles.updateSettings({ viewMode: mode });
   }
 
-  async function finishFirstRun(install: boolean): Promise<void> {
+  async function installFromPrompt(): Promise<void> {
     installing = true;
     try {
-      if (install) {
-        await window.agenttiles.setHooks(true);
-        await window.agenttiles.setStatusline(true);
-      }
-      settingsView = await window.agenttiles.finishFirstRun();
+      await window.agenttiles.setHooks(true);
+      await window.agenttiles.setStatusline(true);
+      settingsView = await window.agenttiles.closeHookPrompt(false);
       if (settingsView.integration.error) showSettings = true;
     } finally {
       installing = false;
     }
+  }
+
+  async function closeHookPrompt(forever: boolean): Promise<void> {
+    settingsView = await window.agenttiles.closeHookPrompt(forever);
   }
 
   /** For D (deny): the selected tile when it has a pending permission, otherwise the longest waiting one. */
@@ -444,7 +446,7 @@
   <Stats today={snapshot.header.today} onClose={() => (showToday = false)} />
 {/if}
 
-{#if settingsView?.firstRun}
+{#if settingsView?.askHooks}
   <div class="modal-backdrop">
     <div class="modal">
       <h2>Connect AgentTiles to Claude Code</h2>
@@ -455,11 +457,12 @@
       </p>
       <p class="hint">
         Existing hooks and statuslines are kept. Running sessions pick up the hooks when Claude Code reloads its
-        settings. You can change this any time in Settings.
+        settings. You can install or remove them any time in Settings.
       </p>
       <div class="modal-buttons">
-        <button class="secondary" disabled={installing} onclick={() => finishFirstRun(false)}>Not now</button>
-        <button class="primary" disabled={installing} onclick={() => finishFirstRun(true)}>
+        <button class="secondary" disabled={installing} onclick={() => closeHookPrompt(true)}>Don't ask again</button>
+        <button class="secondary" disabled={installing} onclick={() => closeHookPrompt(false)}>Not now</button>
+        <button class="primary" disabled={installing} onclick={installFromPrompt}>
           {installing ? 'Installing…' : 'Install hooks and statusline'}
         </button>
       </div>
