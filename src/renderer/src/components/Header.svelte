@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { HeaderView, RateLimit, UpdateView, ViewMode } from '../../../core/types';
   import type { StatusFilter } from '../layout';
-  import { COST_HINT, clock, since, usd } from '../format';
+  import { USAGE_COST_HINT, clock, since, usd } from '../format';
 
   interface Props {
     header: HeaderView;
@@ -115,7 +115,7 @@
     {@render bar('7d', header.sevenDay, null)}
   </button>
   <span class="sep"></span>
-  <button class="item today" onclick={onToday} title={COST_HINT}>
+  <button class="item today" onclick={onToday} title={USAGE_COST_HINT}>
     <b>{usd(header.today.costUsd)}</b><span class="label">API-equiv. today</span>
   </button>
   <div class="buttons">

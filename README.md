@@ -63,7 +63,8 @@ in any terminal or IDE. You don't have to start them in a special way.
 **Know your budget**
 - **5-hour and 7-day plan limits** in the header, with reset times and a forecast of when you will hit the limit at
   your current pace.
-- Cost today and **stats over 7 or 30 days**, per day and per project.
+- Cost today and **stats over 7 or 30 days**, per day, project and model, read from the session transcripts (so
+  they reach back before AgentTiles was installed), with CSV export.
 
 | Stats | Start or resume a session |
 |---|---|
@@ -187,8 +188,9 @@ sessions it started itself. AgentTiles watches *every* interactive session on th
 separate screen, and lets you act on them from there.
 
 **What does the "API-equivalent" cost mean?**
-It is what the session would cost at API prices, as reported by Claude Code. On a subscription plan you don't pay
-this amount; the plan limits in the header are what matters there.
+It is what the tokens would cost at API list prices: on a tile as reported by Claude Code's statusline, in the
+header and stats summed from the session transcripts. On a subscription plan you don't pay this amount; the plan
+limits in the header are what matters there.
 
 **How do I remove everything?**
 

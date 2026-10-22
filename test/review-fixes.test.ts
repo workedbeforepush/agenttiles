@@ -138,15 +138,4 @@ describe('daily stats robustness', () => {
     writeFileSync(join(dir, 'today.json'), '{"date": "2026-10-21", "cos');
     expect(new DailyStats(dir).view().turns).toBe(0);
   });
-
-  it('forgets carried baselines of sessions that no longer run', () => {
-    const stats = new DailyStats(dir);
-    const yesterday = new Date().setHours(0, 0, 0, 0) - 1;
-    stats.recordCost('gone', 5, yesterday, 'p'); // baseline = latest = 5, contributes nothing today
-    stats.recordCost('live', 5, yesterday, 'p');
-    stats.retain(new Set(['live']));
-    stats.recordCost('gone', 7, yesterday, 'p'); // re-seen later: new baseline, still 0 today
-    expect(stats.view().costUsd).toBe(0);
-    stats.flush();
-  });
 });

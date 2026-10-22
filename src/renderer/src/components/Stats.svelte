@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { DaySummary, ProjectDay, StatsView, TodayView } from '../../../core/types';
-  import { COST_HINT, duration, usd } from '../format';
+  import { USAGE_COST_HINT, duration, tokenCount, usd } from '../format';
 
   interface Props {
     today: TodayView;
@@ -78,6 +78,15 @@
     return ([1, 2, 5, 10].map((f) => f * power).find((v) => v >= value) ?? 10 * power);
   }
 
+  /** Per model over the range, most expensive first. */
+  const models = $derived(Object.entries(stats?.models ?? {}).sort((a, b) => (b[1].costUsd ?? 0) - (a[1].costUsd ?? 0)));
+
+  let exported = $state<string | null>(null);
+
+  async function exportCsv(): Promise<void> {
+    exported = await window.agenttiles.exportUsage();
+  }
+
   const before = $derived(stats && days[0] && stats.recordedSince > days[0].date ? stats.recordedSince : null);
 </script>
 
@@ -132,7 +141,7 @@
         <div class="stat"><b>{today.turns}</b><span>prompts</span></div>
         <div class="stat" style:--c="var(--st-working)"><b>{duration(today.workingMs)}</b><span>Claude working</span></div>
         <div class="stat" style:--c="var(--st-needsApproval)"><b>{duration(today.waitingMs)}</b><span>waiting for you</span></div>
-        <div class="stat" title={COST_HINT}><b>{usd(today.costUsd)}</b><span>API-equivalent</span></div>
+        <div class="stat" title={USAGE_COST_HINT}><b>{usd(today.costUsd)}</b><span>API-equivalent</span></div>
       </div>
       <p class="hint">
         Working and waiting time add up across sessions, so they can exceed the wall clock. Prompts are counted from
@@ -142,7 +151,7 @@
       <p class="hint">Stats could not be loaded.</p>
     {:else if stats}
       <div class="grid">
-        <div class="stat" title={COST_HINT}><b>{usd(totals.cost)}</b><span>API-equivalent</span></div>
+        <div class="stat" title={USAGE_COST_HINT}><b>{usd(totals.cost)}</b><span>API-equivalent</span></div>
         <div class="stat"><b>{totals.turns}</b><span>prompts</span></div>
         <div class="stat" style:--c="var(--st-working)"><b>{duration(totals.working)}</b><span>Claude working</span></div>
         <div class="stat" style:--c="var(--st-needsApproval)"><b>{duration(totals.waiting)}</b><span>waiting for you</span></div>
@@ -171,9 +180,31 @@
       {:else}
         <p class="hint">No activity in this range yet.</p>
       {/if}
-      {#if before}
-        <p class="hint">AgentTiles records stats while it runs; data starts on {label(before)}</p>
+      {#if models.length > 0}
+        <table>
+          <thead>
+            <tr><th>Model</th><th>Input</th><th>Output</th><th>Cache write</th><th>Cache read</th><th>Cost</th></tr>
+          </thead>
+          <tbody>
+            {#each models as [name, m] (name)}
+              <tr>
+                <td class="name" title={name}>{name}</td>
+                <td>{tokenCount(m.inputTokens)}</td>
+                <td>{tokenCount(m.outputTokens)}</td>
+                <td>{tokenCount(m.cacheWriteTokens)}</td>
+                <td>{tokenCount(m.cacheReadTokens)}</td>
+                <td title={m.costUsd === null ? 'No price known for this model' : undefined}>{m.costUsd === null ? '–' : usd(m.costUsd)}</td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
       {/if}
+      <p class="hint">
+        Cost comes from the session transcripts; prompts and times are recorded while AgentTiles runs{#if before}, data
+          starts on {label(before)}{/if}.
+        <button class="link" onclick={exportCsv}>Export CSV</button>
+        {#if exported}<span class="saved">Saved to {exported}</span>{/if}
+      </p>
     {/if}
   </div>
 </div>
@@ -403,5 +434,23 @@
     margin: 8px 0 0;
     color: var(--muted);
     font-size: 12px;
+  }
+
+  table + table {
+    margin-top: 12px;
+  }
+
+  .link {
+    padding: 0;
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .saved {
+    margin-left: 6px;
   }
 </style>

@@ -147,10 +147,21 @@ export interface DaySummary {
   projects: Record<string, ProjectDay>;
 }
 
+/** Tokens and API-equivalent cost of one model; `costUsd` is null for a model without a known price. */
+export interface ModelUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cacheWriteTokens: number;
+  cacheReadTokens: number;
+  costUsd: number | null;
+}
+
 export interface StatsView {
   /** Oldest first, one entry per day including empty ones; the last entry is today, live. */
   days: DaySummary[];
-  /** First day AgentTiles has data for (YYYY-MM-DD). */
+  /** Usage per model over the whole range. */
+  models: Record<string, ModelUsage>;
+  /** First day with data (YYYY-MM-DD): the oldest transcript or the first day AgentTiles ran. */
   recordedSince: string;
 }
 

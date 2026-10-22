@@ -59,4 +59,6 @@ export interface AgentTilesApi {
   runUpdate(): Promise<void>;
   /** Statistics of the last 7 or 30 days. */
   getStats(days: 7 | 30): Promise<StatsView>;
+  /** Saves all usage as CSV (save dialog); resolves the file path, or null when cancelled. */
+  exportUsage(): Promise<string | null>;
 }
