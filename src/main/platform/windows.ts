@@ -1,6 +1,6 @@
 // Win32 helpers via koffi: process table, process start time, host window lookup and focus.
 import koffi from 'koffi';
-import { execFileSync, spawn } from 'node:child_process';
+import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 
 const kernel32 = koffi.load('kernel32.dll');
 const user32 = koffi.load('user32.dll');
@@ -248,26 +248,36 @@ export function hwndValue(hwnd: Hwnd): string {
   return koffi.address(hwnd).toString();
 }
 
+// Runs for the app's lifetime: starting PowerShell and loading UI Automation takes about a second, the tab search
+// itself a few milliseconds. One request per stdin line ({"hwnds": [...], "titles": [...]}), one answer per stdout
+// line: the hwnd whose tab was selected, or an empty line. Ends when stdin closes.
 const SELECT_TAB_SCRIPT = `
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
-$titles = $env:AGENTTILES_TITLES | ConvertFrom-Json
-$hwnds = $env:AGENTTILES_HWNDS | ConvertFrom-Json
 $cond = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::TabItem)
-foreach ($h in $hwnds) {
-  $window = [System.Windows.Automation.AutomationElement]::FromHandle([IntPtr][long]$h)
-  foreach ($tab in $window.FindAll([System.Windows.Automation.TreeScope]::Descendants, $cond)) {
-    $name = $tab.Current.Name
-    foreach ($t in $titles) {
-      if ($name -eq $t -or $name.EndsWith(' ' + $t)) {
-        $tab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
-        [Console]::Out.Write($h)
-        exit 0
+while ($null -ne ($line = [Console]::In.ReadLine())) {
+  $answer = ''
+  try {
+    $request = $line | ConvertFrom-Json
+    :search foreach ($h in $request.hwnds) {
+      $window = [System.Windows.Automation.AutomationElement]::FromHandle([IntPtr][long]$h)
+      foreach ($tab in $window.FindAll([System.Windows.Automation.TreeScope]::Descendants, $cond)) {
+        $name = $tab.Current.Name
+        foreach ($t in $request.titles) {
+          if ($name -eq $t -or $name.EndsWith(' ' + $t)) {
+            $tab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+            $answer = $h
+            break search
+          }
+        }
       }
     }
+  } catch {
+    # A window that closed meanwhile: no tab.
   }
+  [Console]::Out.WriteLine($answer)
+  [Console]::Out.Flush()
 }
-exit 3
 `;
 
 /**
@@ -291,31 +301,58 @@ export function openTerminalTab(cwd: string, command: string[], env: NodeJS.Proc
   });
 }
 
+let tabWorker: ChildProcess | null = null;
+let tabAnswer: ((line: string | null) => void) | null = null;
+
+function startTabWorker(): ChildProcess {
+  const encoded = Buffer.from(SELECT_TAB_SCRIPT, 'utf16le').toString('base64');
+  const child = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded], {
+    windowsHide: true,
+    stdio: ['pipe', 'pipe', 'ignore'],
+  });
+  let buffered = '';
+  child.stdout?.on('data', (chunk: Buffer) => {
+    buffered += chunk.toString();
+    let end: number;
+    while ((end = buffered.indexOf('\n')) >= 0) {
+      const line = buffered.slice(0, end).trim();
+      buffered = buffered.slice(end + 1);
+      tabAnswer?.(line);
+    }
+  });
+  const gone = (): void => {
+    if (tabWorker === child) tabWorker = null;
+    tabAnswer?.(null);
+  };
+  child.on('error', gone);
+  child.on('exit', gone);
+  // Writing to a worker that just exited fails with EPIPE; `exit` already answered.
+  child.stdin?.on('error', () => undefined);
+  return child;
+}
+
+/** Starts the tab worker ahead of the first click, so that click does not wait for PowerShell. */
+export function prepareTabSelection(): void {
+  tabWorker ??= startTabWorker();
+}
+
 /**
  * Finds the Windows Terminal window and tab whose title matches one of the given titles (Claude Code titles its tab
  * "<spinner> <session title>"), selects that tab and resolves the window. Resolves null when no tab matched.
+ * One request at a time (the caller serialises).
  */
 export function selectTerminalTab(hwnds: Hwnd[], titles: string[]): Promise<Hwnd | null> {
-  const encoded = Buffer.from(SELECT_TAB_SCRIPT, 'utf16le').toString('base64');
   const values = hwnds.map(hwndValue);
+  const worker = (tabWorker ??= startTabWorker());
   return new Promise((resolve) => {
-    const child = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded], {
-      windowsHide: true,
-      env: { ...process.env, AGENTTILES_HWNDS: JSON.stringify(values), AGENTTILES_TITLES: JSON.stringify(titles) },
-      stdio: ['ignore', 'pipe', 'ignore'],
-    });
-    let stdout = '';
-    child.stdout.on('data', (chunk: Buffer) => (stdout += chunk.toString()));
-    // UI Automation can hang on an unresponsive window; never leave PowerShell processes behind.
-    const timer = setTimeout(() => child.kill(), TAB_SELECT_TIMEOUT_MS);
-    child.on('error', () => {
+    // UI Automation can hang on an unresponsive window: drop the worker, the next request starts a new one.
+    const timer = setTimeout(() => worker.kill(), TAB_SELECT_TIMEOUT_MS);
+    tabAnswer = (line) => {
       clearTimeout(timer);
-      resolve(null);
-    });
-    child.on('exit', (code) => {
-      clearTimeout(timer);
-      const index = code === 0 ? values.indexOf(stdout.trim()) : -1;
+      tabAnswer = null;
+      const index = line ? values.indexOf(line) : -1;
       resolve(index >= 0 ? (hwnds[index] ?? null) : null);
-    });
+    };
+    worker.stdin?.write(`${JSON.stringify({ hwnds: values, titles })}\n`);
   });
 }

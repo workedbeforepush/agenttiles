@@ -14,6 +14,7 @@ let selectingTab = false;
 export async function initPlatform(): Promise<void> {
   if (process.platform === 'win32') {
     win = await import('./windows');
+    win.prepareTabSelection();
     return;
   }
   // Before anything looks for node or claude: apps started from Finder or a launcher lack the shell's PATH.
