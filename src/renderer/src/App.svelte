@@ -98,6 +98,7 @@
   const viewMode = $derived<ViewMode>(settings?.viewMode ?? 'tiles');
   const grouped = $derived(settings?.groupByProject ?? false);
   const shownTiles = $derived(filterTiles(snapshot.tiles, filters));
+  const hiddenCount = $derived(snapshot.tiles.length - shownTiles.length);
   /** Shown tiles in screen order (grouped by project when on); 1–9 follow this order. */
   const indexed = $derived(
     groupTiles(shownTiles.map((tile) => ({ tile })), grouped)
@@ -389,6 +390,14 @@
     />
   {/if}
 
+  <!-- Outside main, so the page size accounts for it. Hidden while the empty state already offers "Show all". -->
+  {#if hiddenCount > 0 && shownTiles.length > 0}
+    <p class="filter-hidden">
+      {t('app.filterHidden', { count: hiddenCount })}
+      <button class="link" onclick={() => (filters = [])}>{t('app.empty.showAll')}</button>
+    </p>
+  {/if}
+
   <main bind:clientWidth={mainWidth} bind:clientHeight={mainHeight}>
     {#if snapshot.tiles.length === 0}
       <div class="empty">
@@ -558,6 +567,12 @@
     color: var(--accent);
     text-decoration: underline;
     cursor: pointer;
+  }
+
+  .filter-hidden {
+    margin: 10px 16px 0;
+    color: var(--muted);
+    font-size: 12px;
   }
 
   .grid.tiles {

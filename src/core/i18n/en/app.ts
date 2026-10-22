@@ -7,6 +7,7 @@ export const app = {
     noMatch: 'No sessions match the filter.',
     showAll: 'Show all',
   },
+  filterHidden: { one: '{count} session hidden by the filter.', other: '{count} sessions hidden by the filter.' },
   pager: {
     label: 'Pages',
     previous: 'Previous page',
