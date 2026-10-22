@@ -2,7 +2,6 @@
 // The real renderer and preload are loaded; this file stands in for AgentTiles's main process and answers its IPC
 // channels with invented sessions (see demo.ts). Output goes to docs/images/.
 import { BrowserWindow, app, ipcMain, nativeTheme, type NativeImage } from 'electron';
-import { once } from 'node:events';
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -313,11 +312,8 @@ async function run(): Promise<void> {
     // Offscreen: rendering does not depend on the user's screen (a covered or sleeping display breaks captures).
     webPreferences: { preload: join(ROOT, 'out', 'preload', 'index.js'), sandbox: true, contextIsolation: true, offscreen: true },
   });
-  // A capture before the first offscreen frame fails with UnknownVizError (seen on slow Windows CI runners).
-  const painted = once(win.webContents, 'paint');
   await win.loadFile(join(ROOT, 'out', 'renderer', 'index.html'));
   fit(WIDTH, HEIGHT, SCALE);
-  await painted;
   await sleep(1500);
 
   const dashboard = await capture('dashboard.png');
