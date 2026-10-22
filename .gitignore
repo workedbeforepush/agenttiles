@@ -1,7 +1,30 @@
+# Dependencies and build output
 node_modules/
 out/
+*.tgz
+*.tsbuildinfo
+coverage/
+
+# Logs and caches
 *.log
 .svelte-check/
-# private notes and plans (design notes, plans): never committed
+.eslintcache
+
+# Local environment: never commit secrets
+.env
+.env.*
+
+# Editors and OS files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Claude Code: personal settings and agent worktrees (shared .claude/ files stay committable)
+.claude/settings.local.json
+.claude/worktrees/
+
+# Private notes and plans (design notes, plans): never committed
 private/
-*.tgz
