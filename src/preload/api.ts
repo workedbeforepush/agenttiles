@@ -22,6 +22,8 @@ export interface AgentTilesApi {
   setStatusline(enabled: boolean): Promise<SettingsView>;
   /** Closes the hook prompt until the next start, or for good with `forever`. */
   closeHookPrompt(forever: boolean): Promise<SettingsView>;
+  /** Marks the welcome tour as run. */
+  finishTour(): Promise<SettingsView>;
   unhideSession(sessionId: string): Promise<SettingsView>;
   unhideProject(path: string): Promise<SettingsView>;
   tileAction(sessionId: string, action: TileAction): Promise<void>;

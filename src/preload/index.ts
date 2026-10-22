@@ -17,6 +17,7 @@ const api: AgentTilesApi = {
   setHooks: (enabled) => ipcRenderer.invoke('integration:hooks', enabled),
   setStatusline: (enabled) => ipcRenderer.invoke('integration:statusline', enabled),
   closeHookPrompt: (forever) => ipcRenderer.invoke('hookprompt:close', forever),
+  finishTour: () => ipcRenderer.invoke('tour:done'),
   unhideSession: (sessionId) => ipcRenderer.invoke('unhide:session', sessionId),
   unhideProject: (path) => ipcRenderer.invoke('unhide:project', path),
   tileAction: (sessionId, action) => ipcRenderer.invoke('tile:action', sessionId, action),

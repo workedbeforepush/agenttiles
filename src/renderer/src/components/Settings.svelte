@@ -66,9 +66,10 @@
     onChange: (view: SettingsView) => void;
     onClose: () => void;
     onDoctor: () => void;
+    onTour: () => void;
   }
 
-  let { view, onChange, onClose, onDoctor }: Props = $props();
+  let { view, onChange, onClose, onDoctor, onTour }: Props = $props();
   let busy = $state(false);
 
   let saveError = $state<string | null>(null);
@@ -123,6 +124,7 @@
     {#if saveError}<p class="error">Could not save: {saveError}</p>{/if}
     <div class="head">
       <h2>Settings</h2>
+      <button class="tour" onclick={onTour}>✨ Replay the tour</button>
       <button class="close" onclick={onClose} aria-label="Close">✕</button>
     </div>
 
@@ -371,6 +373,16 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+  }
+
+  .tour {
+    margin: 0 10px 0 auto;
+    padding: 4px 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 12px;
   }
 
   h2 {
