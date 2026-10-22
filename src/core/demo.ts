@@ -20,6 +20,8 @@ interface TileSpec {
   sinceMin: number;
   label?: StateLabel;
   activity?: Activity | null;
+  /** A background session (`claude --bg`). */
+  jobId?: string;
   model?: string;
   branch: string;
   added: number;
@@ -65,7 +67,7 @@ function tile(now: number, s: TileSpec): TileView {
     lastAssistant: s.lastAssistant ?? null,
     pending: s.pending ?? null,
     version: '2.1.306',
-    jobId: null,
+    jobId: s.jobId ?? null,
     recentTools: s.recentTools ?? [],
     turnStartedAt: s.turnMin != null ? now - s.turnMin * MIN : null,
     lastTurnMs: s.lastTurnMin != null ? s.lastTurnMin * MIN : null,
@@ -335,6 +337,7 @@ export function snapshot(now: number, progress: DemoProgress = { approved: false
     tile(now, {
       id: 'g7',
       name: 'Search across the monorepo',
+      jobId: '4f2a9c1e',
       project: 'platform',
       state: 'compacting',
       sinceMin: 0,
