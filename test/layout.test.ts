@@ -6,12 +6,12 @@ const tile = (id: string, state: TileView['state'], cwd = 'C:\\p\\a'): TileView 
   ({ sessionId: id, state, cwd, project: cwd.split('\\').at(-1) }) as TileView;
 
 describe('filter', () => {
-  const tiles = [tile('1', 'working'), tile('2', 'compacting'), tile('3', 'needsApproval'), tile('4', 'done'), tile('5', 'idle')];
+  const tiles = [tile('1', 'working'), tile('2', 'compacting'), tile('3', 'needsApproval'), tile('4', 'done'), tile('5', 'idle'), tile('6', 'error'), tile('7', 'unknown')];
 
   it('shows everything without a filter and combines filters', () => {
-    expect(filterTiles(tiles, [])).toHaveLength(5);
+    expect(filterTiles(tiles, [])).toHaveLength(7);
     expect(filterTiles(tiles, ['working']).map((t) => t.sessionId)).toEqual(['1', '2']);
-    expect(filterTiles(tiles, ['waiting', 'done']).map((t) => t.sessionId)).toEqual(['3', '4']);
+    expect(filterTiles(tiles, ['waiting', 'done']).map((t) => t.sessionId)).toEqual(['3', '4', '5', '6']);
   });
 });
 

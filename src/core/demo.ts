@@ -2,6 +2,7 @@
 import type { Activity, HistoryPoint, PendingPermission, SessionState, Snapshot, StateLabel, TileView } from './types';
 import { toolDiff } from './diff';
 import { suggestionLabel } from './permissions';
+import { countStates } from './counters';
 
 export const MIN = 60_000;
 /** A plausible state history over the last 30 minutes, ending in `last`. */
@@ -364,13 +365,10 @@ export function snapshot(now: number, progress: DemoProgress = { approved: false
       steps: ['working', 'done'],
     }),
   ];
-  const count = (...states: SessionState[]): number => tiles.filter((t) => states.includes(t.state)).length;
   return {
     tiles,
     header: {
-      working: count('working', 'compacting'),
-      waiting: count('needsApproval', 'needsInput'),
-      done: count('done'),
+      ...countStates(tiles.map((t) => t.state)),
       fiveHour: { usedPct: 62, resetsAt: Math.round((now + 112 * MIN) / 1000), observedAt: now - MIN },
       sevenDay: { usedPct: 38, resetsAt: Math.round((now + 3 * 24 * 60 * MIN) / 1000), observedAt: now - MIN },
       fiveHourEta: null,

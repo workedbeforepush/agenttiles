@@ -1,15 +1,8 @@
 // Filtering, grouping and paging of tiles (DOM-free so it is testable in Node).
-import type { SessionState, TileView } from '../../core/types';
+import { FILTER_STATES, type StatusFilter } from '../../core/counters';
+import type { TileView } from '../../core/types';
 
 /** Header counters double as filters; none active shows everything. */
-export type StatusFilter = 'working' | 'waiting' | 'done';
-
-export const FILTER_STATES: Record<StatusFilter, SessionState[]> = {
-  working: ['working', 'compacting'],
-  waiting: ['needsApproval', 'needsInput'],
-  done: ['done'],
-};
-
 export function filterTiles(tiles: TileView[], filters: StatusFilter[]): TileView[] {
   if (filters.length === 0) return tiles;
   const states = new Set(filters.flatMap((f) => FILTER_STATES[f]));

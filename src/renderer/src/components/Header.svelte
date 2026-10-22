@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { HeaderView, RateLimit, UpdateView, ViewMode } from '../../../core/types';
-  import type { StatusFilter } from '../layout';
+  import type { StatusFilter } from '../../../core/counters';
   import { clock, since, usd } from '../format';
   import { locale, t } from '../i18n.svelte';
 
