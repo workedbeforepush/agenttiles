@@ -287,8 +287,13 @@ export interface SettingsView {
   hiddenProjects: string[];
   hiddenSessions: HiddenSession[];
   integration: IntegrationStatus;
-  /** Offer the hooks at start: they are not installed and the prompt was neither closed in this run nor turned off. */
+  /**
+   * Offer the hooks at start: they are not installed, the prompt was neither closed in this run nor turned off, and the
+   * tour (which offers them itself) has run.
+   */
   askHooks: boolean;
+  /** First start: the welcome tour has not run yet. */
+  showTour: boolean;
   platform: string;
 }
 

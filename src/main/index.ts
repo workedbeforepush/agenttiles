@@ -230,7 +230,8 @@ async function start(): Promise<void> {
       hiddenProjects: config.config.hiddenProjects,
       hiddenSessions: store.hiddenSessionList(),
       integration: status,
-      askHooks: !status.hooksInstalled && !hookPromptClosed && !config.config.hookPromptOff,
+      askHooks: !status.hooksInstalled && !hookPromptClosed && !config.config.hookPromptOff && config.config.tourDone,
+      showTour: !config.config.tourDone,
       platform: process.platform,
     };
   };
@@ -265,6 +266,13 @@ async function start(): Promise<void> {
   });
   ipcMain.handle('integration:statusline', (_e, enabled: boolean) => {
     integration.setStatusline(enabled);
+    return settingsView();
+  });
+  ipcMain.handle('tour:done', () => {
+    // The tour's last step offered the hooks: no second prompt in this run.
+    hookPromptClosed = true;
+    config.config.tourDone = true;
+    config.save();
     return settingsView();
   });
   ipcMain.handle('hookprompt:close', (_e, forever: boolean) => {

@@ -10,6 +10,8 @@
   import QuestionDialog from './components/QuestionDialog.svelte';
   import ReviewDialog from './components/ReviewDialog.svelte';
   import NewSession from './components/NewSession.svelte';
+  import Tour from './components/Tour.svelte';
+  import { snapshot as demoSnapshot } from '../../core/demo';
   import { filterTiles, groupTiles, paginate, type StatusFilter } from './layout';
   import { NEEDS_YOU, paintTaskbarBadge, paintTrayIcon } from './format';
   import { SOUND_PRIORITY, playCue } from './sounds';
@@ -54,7 +56,8 @@
   /** Project heading in grouped mode: 22px line plus 6px to its tiles. */
   const HEADING_PX = 28;
 
-  let snapshot = $state<Snapshot>({
+  /** The sessions from main; while the tour runs, the dashboard shows invented ones instead. */
+  let live = $state<Snapshot>({
     tiles: [],
     header: {
       working: 0,
@@ -67,6 +70,9 @@
     },
   });
   let now = $state(Date.now());
+  let touring = $state(false);
+  let tourSnapshot = $state<Snapshot | null>(null);
+  const snapshot = $derived(touring && tourSnapshot ? tourSnapshot : live);
   let settingsView = $state<SettingsView | null>(null);
   let showSettings = $state(false);
   let showDoctor = $state(false);
@@ -128,6 +134,7 @@
       showToday ||
       showNewSession ||
       answering !== null ||
+      touring ||
       (settingsView?.askHooks ?? false),
   );
 
@@ -168,6 +175,33 @@
 
   async function setViewMode(mode: ViewMode): Promise<void> {
     settingsView = await window.agenttiles.updateSettings({ viewMode: mode });
+  }
+
+  function startTour(): void {
+    showSettings = false;
+    filters = [];
+    page = 0;
+    selectedId = null;
+    tourSnapshot = demoSnapshot(Date.now());
+    touring = true;
+  }
+
+  async function finishTour(): Promise<void> {
+    touring = false;
+    tourSnapshot = null;
+    settingsView = await window.agenttiles.finishTour();
+  }
+
+  async function installFromTour(): Promise<void> {
+    installing = true;
+    try {
+      await window.agenttiles.setHooks(true);
+      await window.agenttiles.setStatusline(true);
+      await finishTour();
+      if (settingsView?.integration.error) showSettings = true;
+    } finally {
+      installing = false;
+    }
   }
 
   async function installFromPrompt(): Promise<void> {
@@ -267,7 +301,7 @@
   onMount(() => {
     // No expression body: returning the reactive proxy would make contextBridge try (and fail) to clone it back.
     window.agenttiles.onSnapshot((next) => {
-      snapshot = next;
+      live = next;
     });
     window.agenttiles.onOpenSettings(() => void openSettings());
     window.agenttiles.onSettingsChanged(() => {
@@ -280,10 +314,14 @@
     });
     void window.agenttiles.getUpdate().then((initial) => (update = initial));
     void window.agenttiles.isFullscreen().then((value) => (fullscreen = value));
-    void window.agenttiles.getSnapshot().then((initial) => (snapshot = initial));
+    void window.agenttiles.getSnapshot().then((initial) => (live = initial));
     void refreshSettings();
     const timer = setInterval(() => (now = Date.now()), 1000);
     return () => clearInterval(timer);
+  });
+
+  $effect(() => {
+    if (settingsView?.showTour && !touring) startTour();
   });
 
   $effect(() => {
@@ -299,8 +337,9 @@
   });
 
   $effect(() => {
-    const count = snapshot.header.waiting;
-    const tooltip = `AgentTiles · ${snapshot.header.working} working · ${count} waiting · ${snapshot.header.done} done`;
+    // The tray and taskbar always count the real sessions, also during the tour.
+    const count = live.header.waiting;
+    const tooltip = `AgentTiles · ${live.header.working} working · ${count} waiting · ${live.header.done} done`;
     if (tooltip === lastTray) return;
     lastTray = tooltip;
     void window.agenttiles.iconPixelSize().then(async (size) => {
@@ -410,6 +449,16 @@
     onChange={(next) => (settingsView = next)}
     onClose={() => (showSettings = false)}
     onDoctor={() => (showDoctor = true)}
+    onTour={startTour}
+  />
+{/if}
+
+{#if touring}
+  <Tour
+    hooksInstalled={settingsView?.integration.hooksInstalled ?? false}
+    {installing}
+    onInstall={() => void installFromTour()}
+    onDone={() => void finishTour()}
   />
 {/if}
 
@@ -446,7 +495,7 @@
   <Stats today={snapshot.header.today} onClose={() => (showToday = false)} />
 {/if}
 
-{#if settingsView?.askHooks}
+{#if settingsView?.askHooks && !touring}
   <div class="modal-backdrop">
     <div class="modal">
       <h2>Connect AgentTiles to Claude Code</h2>

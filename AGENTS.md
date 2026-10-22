@@ -17,7 +17,7 @@ macOS and Linux are experimental. The README has the feature overview; this file
   `markdownHtml`, which escapes first. Keep `{@html}` limited to that function's output.
 - **Local only.** No telemetry, no server. Network use is the npm update check and the `claude -p` limit probe.
 - **User data is the user's.** README images and tests use invented projects, paths and costs (see
-  `scripts/screenshots/demo.ts`).
+  `src/core/demo.ts`, also the sessions of the welcome tour).
 
 ## Workflow
 
