@@ -1,6 +1,6 @@
 {
   "name": "agenttiles",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Mission control for Claude Code: every running session on one screen. Approve, answer and jump to the right terminal.",
   "keywords": [
     "claude",
