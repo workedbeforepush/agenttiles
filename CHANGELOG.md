@@ -3,6 +3,13 @@
 All notable changes to AgentTiles. Versions follow [Semantic Versioning](https://semver.org/); entries are written
 by release-please from the pull request titles (conventional commits).
 
+## [0.6.1](https://github.com/workedbeforepush/agenttiles/compare/v0.6.0...v0.6.1) (2026-10-22)
+
+
+### Bug Fixes
+
+* focus sessions that Windows handed to the default terminal ([#39](https://github.com/workedbeforepush/agenttiles/issues/39)) ([a816ad8](https://github.com/workedbeforepush/agenttiles/commit/a816ad83f730ae592797b00ca9077d6853223747))
+
 ## [0.6.0](https://github.com/workedbeforepush/agenttiles/compare/v0.5.0...v0.6.0) (2026-10-22)
 
 
