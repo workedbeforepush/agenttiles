@@ -106,6 +106,8 @@ export interface TileView {
   lastAssistant: string | null;
   pending: PendingPermission | null;
   version: string | null;
+  /** Background sessions (`claude --bg`) only: the id for `claude attach` / `claude stop`. */
+  jobId: string | null;
   /** Most recent tool calls, newest last (at most 3). */
   recentTools: string[];
   /** Start of the running turn, null when no turn is running. */
@@ -307,4 +309,5 @@ export type TileAction =
   | 'hideProject'
   | 'openFolder'
   | 'copySessionId'
-  | 'focus';
+  | 'focus'
+  | 'stop';

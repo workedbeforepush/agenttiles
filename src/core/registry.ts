@@ -12,7 +12,10 @@ export interface RegistryEntry {
   statusUpdatedAt: number;
   startedAt: number;
   procStart: string | null;
+  /** `interactive` for a terminal session, `bg` for a background session (`claude --bg`). */
   kind: string;
+  /** Background sessions only: the short id `claude attach` / `claude stop` take. */
+  jobId: string | null;
   version: string | null;
 }
 
@@ -84,6 +87,7 @@ export function parseRegistryEntry(text: string): RegistryEntry | null {
     startedAt: num(raw['startedAt']) ?? 0,
     procStart: str(raw['procStart']),
     kind: str(raw['kind']) ?? 'interactive',
+    jobId: str(raw['jobId']),
     version: str(raw['version']),
   };
 }

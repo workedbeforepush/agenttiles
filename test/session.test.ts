@@ -31,6 +31,7 @@ function registry(status: string, at: number, extra: Partial<RegistryEntry> = {}
     startedAt: 500,
     procStart: '1',
     kind: 'interactive',
+    jobId: null,
     version: '2.1.306',
     ...extra,
   };

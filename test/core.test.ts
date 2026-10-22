@@ -5,6 +5,7 @@ import { firstJsonObject, isRegistryFileName, parseRegistryEntry } from '../src/
 import { applyTranscriptLine, emptyTranscriptInfo } from '../src/core/transcript';
 import { LineSplitter, permissionOutput } from '../src/core/protocol';
 import { projectName, projectSlug } from '../src/core/paths';
+import { attachCommand } from '../src/main/launcher';
 import { toolSummary } from '../src/core/tools';
 
 const fixtures = join(__dirname, 'fixtures', '2.1.306');
@@ -38,6 +39,12 @@ describe('registry', () => {
   it('reads waitingFor when present', () => {
     const waiting = text.replace('"status":"busy"', '"status":"waiting","waitingFor":"permission prompt"');
     expect(parseRegistryEntry(waiting)).toMatchObject({ status: 'waiting', waitingFor: 'permission prompt' });
+  });
+
+  it('reads the job id of a background session', () => {
+    const bg = text.replace('"kind":"interactive"', '"kind":"bg","jobId":"4490bb57"');
+    expect(parseRegistryEntry(bg)).toMatchObject({ kind: 'bg', jobId: '4490bb57' });
+    expect(parseRegistryEntry(text)?.jobId).toBeNull();
   });
 
   it('rejects entries without pid, sessionId or cwd', () => {
@@ -120,5 +127,15 @@ describe('paths and tools', () => {
     expect(toolSummary('Edit', { file_path: 'C:\\src\\main.rs' })).toBe('Edit: main.rs');
     expect(toolSummary('Bash', { command: 'cargo   build\n--release' })).toBe('Bash: cargo build --release');
     expect(toolSummary('Unknown', {})).toBe('Unknown');
+  });
+});
+
+describe('background sessions', () => {
+  it('attaches by job id', () => {
+    expect(attachCommand('4490bb57')).toEqual(['claude', 'attach', '4490bb57']);
+  });
+
+  it('rejects anything that is not a job id', () => {
+    expect(() => attachCommand('4490bb57 & calc')).toThrow('Invalid background session id.');
   });
 });

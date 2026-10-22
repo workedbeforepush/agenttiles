@@ -41,6 +41,9 @@ const POLL_MS = 2000;
 const EMIT_DEBOUNCE_MS = 50;
 const TRANSCRIPT_DEBOUNCE_MS = 100;
 const HOOK_ONLY_TTL_MS = 60_000;
+/** Registry kinds shown as tiles: terminal sessions and background sessions (`claude --bg`). */
+const SHOWN_KINDS = new Set(['interactive', 'bg']);
+
 /** A registered session disappears only after this many scans in a row without a live registry entry. */
 const MISSES_BEFORE_REMOVE = 2;
 /** On first sight only the end of a transcript is read; transcripts can be hundreds of MB. */
@@ -166,7 +169,7 @@ export class SessionStore {
       }
       if (entry) this.lastGood.set(name, entry);
       else entry = this.lastGood.get(name) ?? null;
-      if (!entry || entry.kind !== 'interactive' || this.ownPids.has(entry.pid)) continue;
+      if (!entry || !SHOWN_KINDS.has(entry.kind) || this.ownPids.has(entry.pid)) continue;
       if (!isAlive(entry.pid, entry.procStart)) continue;
       entries.push(entry);
     }
@@ -379,7 +382,7 @@ export class SessionStore {
     if (!rec) return;
     log.debug(`hook ${String(input['hook_event_name'])} ${rec.sessionId}`);
     const effects = applyHookEvent(rec, input, this.eventTime(ts));
-    // Only real (registered) sessions count; print-mode and background runs also fire hooks.
+    // Only real (registered) sessions count; print-mode runs also fire hooks.
     if (rec.registry !== null) {
       this.daily.sawSession(rec.sessionId);
       if (effects.turnStarted) this.daily.turn(projectName(rec.cwd));
@@ -446,7 +449,7 @@ export class SessionStore {
 
   handlePermission(id: string, input: Record<string, unknown>, ts: number): void {
     const rec = this.recordFor(input);
-    // Nobody can answer on a tile that is not shown (print mode, background or hidden sessions): never hold those.
+    // Nobody can answer on a tile that is not shown (print mode or hidden sessions): never hold those.
     if (!rec || !this.isVisible(rec)) {
       this.reply(id, 'pass');
       return;

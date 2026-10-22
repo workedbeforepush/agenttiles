@@ -1,26 +1,17 @@
 // Diagnostics: compares the registry, `claude agents --json` and what AgentTiles shows.
-import { execFile } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { DoctorReport, DoctorRow, IntegrationStatus } from '../core/types';
 import { isRegistryFileName, parseRegistryEntry } from '../core/registry';
 import { sessionsDir } from '../core/paths';
 import { claudeProcesses, isAlive } from './platform';
+import { runClaude } from './launcher';
 
 interface AgentRow {
   sessionId?: string;
   status?: string;
   state?: string;
   waitingFor?: string;
-}
-
-function runClaude(args: string[]): Promise<string> {
-  return new Promise((resolve, reject) => {
-    execFile('claude', args, { encoding: 'utf8', windowsHide: true, timeout: 15_000 }, (error, stdout) => {
-      if (error) reject(error);
-      else resolve(stdout);
-    });
-  });
 }
 
 export async function runDoctor(

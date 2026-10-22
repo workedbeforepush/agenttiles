@@ -1,4 +1,6 @@
-// Recent sessions from the transcripts, and starting new or resumed sessions in a terminal tab.
+// Recent sessions from the transcripts, starting new or resumed sessions in a terminal tab, and the claude CLI for
+// background sessions.
+import { execFile } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { open, readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -18,6 +20,7 @@ const CANDIDATES = 150;
 const MAX_SESSIONS = 40;
 const MAX_PROJECTS = 20;
 const SESSION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const JOB_ID = /^[0-9a-f]{8}$/i;
 
 async function readRange(path: string, size: number): Promise<{ head: string; tail: string }> {
   const handle = await open(path, 'r');
@@ -100,4 +103,37 @@ export async function launchSession(cwd: string, sessionId: string | null): Prom
   if (result === 'unsupported') throw new Error('Starting sessions is not supported on this OS.');
   if (result === 'failed') throw new Error('No terminal could be started (Windows Terminal, iTerm2 / Terminal.app, or a Linux terminal).');
   log.info(`launched ${command.join(' ')} in ${cwd}`);
+}
+
+/** Runs the claude CLI and returns its stdout. */
+export function runClaude(args: string[]): Promise<string> {
+  return new Promise((resolve, reject) => {
+    execFile('claude', args, { encoding: 'utf8', windowsHide: true, timeout: 15_000 }, (error, stdout) => {
+      if (error) reject(error);
+      else resolve(stdout);
+    });
+  });
+}
+
+/** Command that opens a background session in a terminal; throws on an id that is not a job id. */
+export function attachCommand(jobId: string): string[] {
+  if (!JOB_ID.test(jobId)) throw new Error('Invalid background session id.');
+  return ['claude', 'attach', jobId];
+}
+
+/** Opens a background session (`claude attach`) in a new terminal tab. Throws with a message for the user. */
+export async function attachSession(cwd: string, jobId: string): Promise<void> {
+  if (!isDirectory(cwd)) throw new Error(`Folder not found: ${cwd}`);
+  const command = attachCommand(jobId);
+  const result = await openTerminal(cwd, command, cleanEnv());
+  if (result === 'unsupported') throw new Error('Opening background sessions is not supported on this OS.');
+  if (result === 'failed') throw new Error('No terminal could be started (Windows Terminal, iTerm2 / Terminal.app, or a Linux terminal).');
+  log.info(`launched ${command.join(' ')}`);
+}
+
+/** Stops a background session (`claude stop`). */
+export async function stopSession(jobId: string): Promise<void> {
+  if (!JOB_ID.test(jobId)) throw new Error('Invalid background session id.');
+  await runClaude(['stop', jobId]);
+  log.info(`stopped background session ${jobId}`);
 }

@@ -49,6 +49,8 @@ in any terminal or IDE. You don't have to start them in a special way.
 - **Read plans** rendered as Markdown before you decide in the terminal.
 - **Jump to the terminal**: a click focuses the session's terminal: the exact tab in Windows Terminal (even across
   windows), Terminal.app or iTerm2, or the terminal window on Linux.
+- **Background sessions** (`claude --bg`) show up as tiles with a `bg` badge: a click opens them with
+  `claude attach` in a new tab, the tile menu stops them.
 
 | Review a change | Answer a question |
 |---|---|
@@ -119,7 +121,7 @@ flowchart LR
 ```
 
 - **Discovery:** Claude Code keeps a small registry file per running session. AgentTiles watches that folder, so it
-  finds every interactive session immediately, including ones that were running before AgentTiles started.
+  finds every interactive and background session immediately, including ones that were running before AgentTiles started.
 - **Details:** it tails each session's transcript for the title, last prompt, reply and tool calls.
 - **Live events and decisions:** optional command hooks forward events over a local named pipe, protected by a
   random token. For permission requests the hook waits for your decision in AgentTiles; Claude Code's own dialog
@@ -183,7 +185,7 @@ terminal" jumps there.
 
 **How is this different from Claude Code's own agent view or the desktop app?**
 Agent view (`claude agents`) lives in a terminal and lists background sessions. The desktop app manages the
-sessions it started itself. AgentTiles watches *every* interactive session on the machine, wherever it runs, on a
+sessions it started itself. AgentTiles watches *every* interactive and background session on the machine, wherever it runs, on a
 separate screen, and lets you act on them from there.
 
 **What does the "API-equivalent" cost mean?**
