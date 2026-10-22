@@ -16,6 +16,9 @@
   let error = $state<string | null>(null);
   let busy = $state(false);
   let query = $state('');
+  /** The folder picked for a new session; a small dialog asks whether to start there or in a new worktree. */
+  let picked = $state<{ cwd: string; project: string } | null>(null);
+  let worktreeName = $state('');
 
   const needle = $derived(query.trim().toLowerCase());
   const sessions = $derived(
@@ -24,11 +27,11 @@
     ),
   );
 
-  async function launch(cwd: string, sessionId: string | null): Promise<void> {
+  async function launch(cwd: string, sessionId: string | null, worktree: string | null = null): Promise<void> {
     busy = true;
     error = null;
     try {
-      error = await window.agenttiles.launchSession(cwd, sessionId);
+      error = await window.agenttiles.launchSession(cwd, sessionId, worktree);
       if (error === null) onClose();
     } catch (e) {
       error = (e as Error).message;
@@ -39,7 +42,7 @@
 
   async function chooseFolder(): Promise<void> {
     const folder = await window.agenttiles.pickFolder();
-    if (folder) await launch(folder, null);
+    if (folder) picked = { cwd: folder, project: folder.replace(/[\\/]+$/, '').split(/[\\/]/).pop() ?? folder };
   }
 
   onMount(() => {
@@ -52,42 +55,76 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 <div class="backdrop" onclick={onClose}>
-  <div class="panel" role="dialog" tabindex="-1" aria-label={t('newSession.title')} onclick={(e) => e.stopPropagation()}>
-    <div class="head">
-      <h2>{t('newSession.title')}</h2>
-      <button class="close" onclick={onClose} aria-label={t('newSession.close')}>✕</button>
-    </div>
-    {#if error}<p class="error">{error}</p>{/if}
+  {#if !picked}
+    <div class="panel" role="dialog" tabindex="-1" aria-label={t('newSession.title')} onclick={(e) => e.stopPropagation()}>
+      <div class="head">
+        <h2>{t('newSession.title')}</h2>
+        <button class="close" onclick={onClose} aria-label={t('newSession.close')}>✕</button>
+      </div>
+      {#if error}<p class="error">{error}</p>{/if}
 
-    <h3>{t('newSession.startIn')}</h3>
-    <div class="projects">
-      {#each view?.projects ?? [] as project (project.cwd)}
-        <button class="project" disabled={busy} title={project.cwd} onclick={() => void launch(project.cwd, null)}>
-          {project.project}
-        </button>
-      {/each}
-      <button class="project other" disabled={busy} onclick={() => void chooseFolder()}>{t('newSession.chooseFolder')}</button>
-    </div>
+      <h3>{t('newSession.startIn')}</h3>
+      <div class="projects">
+        {#each view?.projects ?? [] as project (project.cwd)}
+          <button
+            class="project"
+            disabled={busy}
+            title={project.cwd}
+            onclick={() => (picked = { cwd: project.cwd, project: project.project })}
+          >
+            {project.project}
+          </button>
+        {/each}
+        <button class="project other" disabled={busy} onclick={() => void chooseFolder()}>{t('newSession.chooseFolder')}</button>
+      </div>
 
-    <div class="resume-head">
-      <h3>{t('newSession.resume')}</h3>
-      <input bind:value={query} placeholder={t('newSession.searchPlaceholder')} aria-label={t('newSession.searchLabel')} />
+      <div class="resume-head">
+        <h3>{t('newSession.resume')}</h3>
+        <input bind:value={query} placeholder={t('newSession.searchPlaceholder')} aria-label={t('newSession.searchLabel')} />
+      </div>
+      <div class="sessions">
+        {#if view === null && !error}
+          <p class="hint">{t('newSession.reading')}</p>
+        {:else if sessions.length === 0}
+          <p class="hint">{t('newSession.noSessions')}</p>
+        {/if}
+        {#each sessions as session (session.sessionId)}
+          <button class="session" disabled={busy} title={session.cwd} onclick={() => void launch(session.cwd, session.sessionId)}>
+            <span class="title">{session.title}</span>
+            <span class="meta">{t('newSession.sessionMeta', { project: session.project, ago: since(session.lastAt, now) })}</span>
+          </button>
+        {/each}
+      </div>
+      <p class="hint"><WithCode text={t('newSession.hint')} codes={{ claude: 'claude', resume: 'claude --resume', worktree: 'claude --worktree' }} /></p>
     </div>
-    <div class="sessions">
-      {#if view === null && !error}
-        <p class="hint">{t('newSession.reading')}</p>
-      {:else if sessions.length === 0}
-        <p class="hint">{t('newSession.noSessions')}</p>
-      {/if}
-      {#each sessions as session (session.sessionId)}
-        <button class="session" disabled={busy} title={session.cwd} onclick={() => void launch(session.cwd, session.sessionId)}>
-          <span class="title">{session.title}</span>
-          <span class="meta">{t('newSession.sessionMeta', { project: session.project, ago: since(session.lastAt, now) })}</span>
-        </button>
-      {/each}
+  {:else}
+    {@const target = picked}
+    <!-- Asks how to start: in the folder itself, or in a new git worktree of it. -->
+    <div class="ask" role="dialog" tabindex="-1" aria-label={t('newSession.ask.title', { project: target.project })} onclick={(e) => e.stopPropagation()}>
+      <h2>{t('newSession.ask.title', { project: target.project })}</h2>
+      <p class="path">{target.cwd}</p>
+      {#if error}<p class="error">{error}</p>{/if}
+      <button class="choice primary" disabled={busy} onclick={() => void launch(target.cwd, null)}>
+        <b>▶ {t('newSession.ask.here')}</b>
+        <span>{t('newSession.ask.hereHint')}</span>
+      </button>
+      <form
+        class="choice"
+        onsubmit={(e) => {
+          e.preventDefault();
+          void launch(target.cwd, null, worktreeName.trim());
+        }}
+      >
+        <b>⎇ {t('newSession.ask.worktree')}</b>
+        <span>{t('newSession.ask.worktreeHint')}</span>
+        <div class="row">
+          <input bind:value={worktreeName} placeholder={t('newSession.ask.worktreeName')} aria-label={t('newSession.ask.worktreeName')} />
+          <button type="submit" disabled={busy}>{t('newSession.ask.worktreeStart')}</button>
+        </div>
+      </form>
+      <button class="cancel" onclick={() => (picked = null)}>{t('newSession.ask.back')}</button>
     </div>
-    <p class="hint"><WithCode text={t('newSession.hint')} codes={{ claude: 'claude', resume: 'claude --resume' }} /></p>
-  </div>
+  {/if}
 </div>
 
 <style>
@@ -165,6 +202,74 @@
     color: var(--muted);
   }
 
+  .ask {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: min(440px, calc(100vw - 32px));
+    padding: 18px 20px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+  }
+
+  .path {
+    margin: -6px 0 2px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    overflow-wrap: anywhere;
+  }
+
+  .choice {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    margin: 0;
+    padding: 10px 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    text-align: left;
+  }
+
+  .choice.primary {
+    border-color: var(--accent);
+  }
+
+  .choice span {
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  button.choice:hover:not(:disabled),
+  .choice:focus-within {
+    border-color: var(--accent);
+  }
+
+  .choice .row {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+    margin-top: 6px;
+  }
+
+  .choice .row button,
+  .cancel {
+    padding: 4px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+  }
+
+  .cancel {
+    align-self: flex-end;
+  }
+
+  .choice .row input,
   .resume-head input {
     flex: 1;
     margin-top: 4px;

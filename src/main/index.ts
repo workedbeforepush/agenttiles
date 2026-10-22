@@ -367,10 +367,16 @@ async function start(): Promise<void> {
     store.changed();
   });
   ipcMain.handle('sessions:recent', () => recentSessions(new Set(snapshot.tiles.map((t) => t.sessionId))));
-  ipcMain.handle('sessions:launch', async (_e, cwd: unknown, sessionId: unknown) => {
-    if (typeof cwd !== 'string' || (sessionId !== null && typeof sessionId !== 'string')) return t('main.invalidRequest');
+  ipcMain.handle('sessions:launch', async (_e, cwd: unknown, sessionId: unknown, worktree: unknown) => {
+    if (
+      typeof cwd !== 'string' ||
+      (sessionId !== null && typeof sessionId !== 'string') ||
+      (worktree !== null && typeof worktree !== 'string')
+    ) {
+      return t('main.invalidRequest');
+    }
     try {
-      await launchSession(cwd, sessionId);
+      await launchSession(cwd, sessionId, worktree);
       return null;
     } catch (error) {
       log.warn(`launch failed: ${(error as Error).message}`);
