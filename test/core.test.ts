@@ -154,19 +154,30 @@ describe('launch command', () => {
   const id = '11111111-2222-3333-4444-555555555555';
 
   it('starts, resumes or starts in a new worktree', () => {
-    expect(launchCommand(null, null)).toEqual(['claude']);
-    expect(launchCommand(id, null)).toEqual(['claude', '--resume', id]);
-    expect(launchCommand(null, '')).toEqual(['claude', '--worktree']);
-    expect(launchCommand(null, 'fix/login-42')).toEqual(['claude', '--worktree', 'fix/login-42']);
+    expect(launchCommand(null, null, false)).toEqual(['claude']);
+    expect(launchCommand(id, null, false)).toEqual(['claude', '--resume', id]);
+    expect(launchCommand(null, '', false)).toEqual(['claude', '--worktree']);
+    expect(launchCommand(null, 'fix/login-42', false)).toEqual(['claude', '--worktree', 'fix/login-42']);
   });
 
   it('resumes in place, never in a worktree', () => {
-    expect(launchCommand(id, 'other')).toEqual(['claude', '--resume', id]);
+    expect(launchCommand(id, 'other', false)).toEqual(['claude', '--resume', id]);
+  });
+
+  it('forks a resumed session into a new session id', () => {
+    expect(launchCommand(id, null, true)).toEqual(['claude', '--resume', id, '--fork-session']);
+    expect(launchCommand(id, 'other', true)).toEqual(['claude', '--resume', id, '--fork-session']);
+  });
+
+  it('forks only a session it resumes, and only valid session ids', () => {
+    expect(() => launchCommand(null, null, true)).toThrow('Invalid request');
+    expect(() => launchCommand('--dangerously-skip-permissions', null, true)).toThrow('Invalid session id');
+    expect(() => launchCommand(`${id} --print`, null, true)).toThrow('Invalid session id');
   });
 
   it('rejects worktree names that are not a plain name', () => {
-    expect(() => launchCommand(null, '--dangerously-skip-permissions')).toThrow('Not a valid worktree name');
-    expect(() => launchCommand(null, 'a b')).toThrow('Not a valid worktree name');
-    expect(() => launchCommand(null, 'x;calc')).toThrow('Not a valid worktree name');
+    expect(() => launchCommand(null, '--dangerously-skip-permissions', false)).toThrow('Not a valid worktree name');
+    expect(() => launchCommand(null, 'a b', false)).toThrow('Not a valid worktree name');
+    expect(() => launchCommand(null, 'x;calc', false)).toThrow('Not a valid worktree name');
   });
 });

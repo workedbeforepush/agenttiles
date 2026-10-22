@@ -71,7 +71,7 @@ function registerIpc(): void {
   for (const channel of ['integration:hooks', 'integration:statusline', 'firstrun:done', 'unhide:session', 'unhide:project']) {
     ipcMain.handle(channel, view);
   }
-  for (const channel of ['tile:action', 'tile:rename', 'tiles:order', 'window:toggleFullscreen', 'sessions:launch', 'dialog:folder']) {
+  for (const channel of ['tile:action', 'ended:action', 'tile:rename', 'tiles:order', 'window:toggleFullscreen', 'sessions:launch', 'dialog:folder']) {
     ipcMain.handle(channel, () => null);
   }
   ipcMain.handle('permission:decide', (_e, _id: string, request: DecisionRequest) => {

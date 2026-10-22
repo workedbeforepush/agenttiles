@@ -27,6 +27,11 @@ export function clock(epochMs: number): string {
   return new Date(epochMs).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
 }
 
+/** Local date and time, short: "22/10/2026, 14:20". */
+export function dateTime(epochMs: number): string {
+  return new Date(epochMs).toLocaleString(locale(), { dateStyle: 'short', timeStyle: 'short' });
+}
+
 export const NEEDS_YOU: SessionState[] = ['needsApproval', 'needsInput'];
 export const TINTED: SessionState[] = ['needsApproval', 'needsInput', 'error', 'limitHit'];
 

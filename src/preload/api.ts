@@ -2,6 +2,7 @@
 import type {
   DecisionRequest,
   DoctorReport,
+  EndedAction,
   LaunchView,
   SettingsPatch,
   UpdateView,
@@ -27,6 +28,8 @@ export interface AgentTilesApi {
   unhideSession(sessionId: string): Promise<SettingsView>;
   unhideProject(path: string): Promise<SettingsView>;
   tileAction(sessionId: string, action: TileAction): Promise<void>;
+  /** Resumes, forks or removes an ended tile. */
+  endedAction(sessionId: string, action: EndedAction): Promise<void>;
   renameTile(sessionId: string, name: string | null): Promise<void>;
   /** Resolves false when the request is gone (answered in the terminal, timed out). */
   decidePermission(id: string, request: DecisionRequest): Promise<boolean>;
@@ -52,7 +55,8 @@ export interface AgentTilesApi {
   recentSessions(): Promise<LaunchView>;
   /** Opens `claude` (or `claude --resume <id>`) in a new terminal tab; resolves an error message or null. */
   /** `worktree`: null for the folder itself, '' or a name for a new git worktree (new sessions only). */
-  launchSession(cwd: string, sessionId: string | null, worktree: string | null): Promise<string | null>;
+  /** `fork`: resume as a new session with a copy of the conversation (`--fork-session`). */
+  launchSession(cwd: string, sessionId: string | null, worktree: string | null, fork: boolean): Promise<string | null>;
   /** Folder picker; null when cancelled. */
   pickFolder(): Promise<string | null>;
   getUpdate(): Promise<UpdateView>;

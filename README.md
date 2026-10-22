@@ -77,7 +77,10 @@ in any terminal or IDE. You don't have to start them in a special way.
 - Filter by state with a click on the header counters, group tiles by project, or switch to a compact list.
 - Fixed tile sizes with paging, full screen and keyboard control (all shortcuts configurable).
 - Start a new session in any recent project, optionally in its own **git worktree**, or **resume** an ended one, in a
-  new terminal tab.
+  new terminal tab. **Fork** a session (`claude --resume <id> --fork-session`) from its tile menu or the resume list
+  to try another direction on a copy of the conversation.
+- **Ended sessions stay as muted tiles** after the running ones for 24 hours, also across restarts, with **Resume**,
+  **Fork** and ✕. They count in no header counter and make no sound.
 - Pin, rename, reorder by drag and drop, hide sessions or whole projects.
 
 <img src="https://raw.githubusercontent.com/workedbeforepush/agenttiles/main/docs/images/list-view.png" alt="List view grouped by project">
@@ -92,7 +95,9 @@ agenttiles
 ```
 
 The `agenttiles` command starts the app and returns right away; the terminal can be closed. The very first start
-downloads Electron (about 100 MB) and takes a little longer. Run it again to bring the window to the front. AgentTiles checks npm for new versions, announces each one with a toast and offers **Update and restart** in its header and tray menu, with a link to the release notes.
+downloads Electron (about 100 MB) and takes a little longer. Run it again to bring the window to the front.
+AgentTiles checks npm for new versions and announces each one with a toast, a note in the corner of the window and a
+tray menu item; a click offers **Update and restart**, with a link to the release notes.
 
 The first start opens a one-minute tour of the dashboard (Settings replays it). It ends by offering the **hooks** and
 the **statusline wrapper** in `~/.claude/settings.json`; while they are not installed, AgentTiles asks again at start
@@ -150,7 +155,7 @@ flowchart LR
 |---|---|---|---|
 | Live tiles, approvals, questions, limits, stats | ✅ | ✅ | ✅ |
 | Jump to the session's terminal | ✅ exact tab in Windows Terminal (any window) and WezTerm; IDEs (Rider, VS Code, …): the window of the session's project; click again to minimize | ✅ exact tab in Terminal.app, iTerm2, WezTerm, kitty and tmux; other apps (VS Code, JetBrains, Ghostty, …) come to the front | ✅ exact pane in WezTerm, kitty and tmux; the terminal window on X11 with `xdotool` (Wayland does not allow it) |
-| Start / resume sessions | ✅ Windows Terminal | ✅ iTerm2, else Terminal.app | ✅ first installed of gnome-terminal, konsole, kitty, wezterm, alacritty, ghostty, xfce4-terminal, tilix, foot, xterm |
+| Start / resume / fork sessions (new tab or new window, see Settings) | ✅ Windows Terminal | ✅ iTerm2, else Terminal.app | ✅ first installed of gnome-terminal, konsole, kitty, wezterm, alacritty, ghostty, xfce4-terminal, tilix, foot, xterm |
 | Waiting count outside the window | ✅ tray + taskbar badge | ✅ menu bar + Dock badge | ✅ tray + launcher count (where the desktop supports it) |
 | Start with system login | ✅ | ✅ | ✅ XDG autostart |
 
@@ -240,7 +245,6 @@ start reading; see [CONTRIBUTING.md](CONTRIBUTING.md) for the project layout.
 
 - Installers on GitHub Releases, winget and Homebrew
 - Confirm macOS and Linux on real machines and drop the "experimental" label
-- Exact tab selection in IDE terminals
 
 Ideas and votes are welcome in [Discussions](https://github.com/workedbeforepush/agenttiles/discussions) and
 [Issues](https://github.com/workedbeforepush/agenttiles/issues).

@@ -17,6 +17,7 @@ import { join } from 'node:path';
 import { ENDPOINT_FILE_NAME, newEndpoint } from '../core/protocol';
 import type {
   DecisionRequest,
+  EndedAction,
   Settings,
   SettingsPatch,
   SettingsView,
@@ -29,6 +30,7 @@ import { DailyStats } from './daily';
 import { UsageLog } from './usage';
 import { usageCsv } from '../core/usage';
 import { LimitsCache } from './limits';
+import { EndedSessions } from './ended';
 import { probeLimits } from './limitProbe';
 import { runDoctor } from './doctor';
 import { Integration } from './integration';
@@ -86,6 +88,7 @@ async function start(): Promise<void> {
   let quitting = false;
   let snapshot: Snapshot = {
     tiles: [],
+    ended: [],
     header: {
       working: 0,
       waiting: 0,
@@ -114,7 +117,7 @@ async function start(): Promise<void> {
 
   // The store needs the IPC server to answer permission holds; the server needs the store for its handlers.
   let ipc: IpcServer | null = null;
-  const store = new SessionStore(config, daily, usage, new LimitsCache(userData), (id, decision, extras) => ipc?.reply(id, decision, extras) ?? false, {
+  const store = new SessionStore(config, daily, usage, new LimitsCache(userData), new EndedSessions(userData), (id, decision, extras) => ipc?.reply(id, decision, extras) ?? false, {
     snapshot: (next) => {
       snapshot = next;
       if (!win.isDestroyed()) win.webContents.send('snapshot', next);
@@ -172,6 +175,16 @@ async function start(): Promise<void> {
     else if (result === 'noX11') notifier.info('AgentTiles', t('main.focus.noX11'));
     else if (result === 'noXdotool') notifier.info('AgentTiles', t('main.focus.noXdotool'));
     else if (result === 'notFound') notifier.info('AgentTiles', t('main.focus.notFound', { sessionId: rec.sessionId }));
+  }
+
+  /** Resumes or forks a session from a tile; a failure is reported as a toast, as there is no dialog to show it. */
+  async function launchFromTile(cwd: string, sessionId: string, fork: boolean): Promise<void> {
+    try {
+      await launchSession(cwd, sessionId, null, fork);
+    } catch (error) {
+      log.warn(`launch failed: ${(error as Error).message}`);
+      notifier.info('AgentTiles', (error as Error).message);
+    }
   }
 
   async function stopBackground(sessionId: string): Promise<void> {
@@ -341,12 +354,36 @@ async function start(): Promise<void> {
       case 'copySessionId':
         clipboard.writeText(sessionId);
         return;
+      case 'fork':
+        await launchFromTile(rec.cwd, sessionId, true);
+        return;
       case 'stop':
         await stopBackground(sessionId);
         return;
     }
     config.save();
     store.changed();
+  });
+  ipcMain.handle('ended:action', async (_e, sessionId: string, action: EndedAction) => {
+    const entry = store.endedSession(sessionId);
+    if (!entry) return;
+    switch (action) {
+      case 'resume':
+        await launchFromTile(entry.cwd, sessionId, false);
+        return;
+      case 'fork':
+        await launchFromTile(entry.cwd, sessionId, true);
+        return;
+      case 'remove':
+        store.removeEnded(sessionId);
+        return;
+      case 'openFolder':
+        await shell.openPath(entry.cwd);
+        return;
+      case 'copySessionId':
+        clipboard.writeText(sessionId);
+        return;
+    }
   });
   ipcMain.handle('tile:rename', (_e, sessionId: unknown, name: unknown) => {
     if (typeof sessionId !== 'string' || (name !== null && typeof name !== 'string')) return;
@@ -383,16 +420,17 @@ async function start(): Promise<void> {
     store.changed();
   });
   ipcMain.handle('sessions:recent', () => recentSessions(new Set(snapshot.tiles.map((t) => t.sessionId))));
-  ipcMain.handle('sessions:launch', async (_e, cwd: unknown, sessionId: unknown, worktree: unknown) => {
+  ipcMain.handle('sessions:launch', async (_e, cwd: unknown, sessionId: unknown, worktree: unknown, fork: unknown) => {
     if (
       typeof cwd !== 'string' ||
       (sessionId !== null && typeof sessionId !== 'string') ||
-      (worktree !== null && typeof worktree !== 'string')
+      (worktree !== null && typeof worktree !== 'string') ||
+      typeof fork !== 'boolean'
     ) {
       return t('main.invalidRequest');
     }
     try {
-      await launchSession(cwd, sessionId, worktree);
+      await launchSession(cwd, sessionId, worktree, fork);
       return null;
     } catch (error) {
       log.warn(`launch failed: ${(error as Error).message}`);

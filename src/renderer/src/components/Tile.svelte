@@ -43,7 +43,7 @@
     hover = false;
     menu = {
       x: Math.max(0, Math.min(event.clientX, window.innerWidth - 180)),
-      y: Math.max(0, Math.min(event.clientY, window.innerHeight - 250)),
+      y: Math.max(0, Math.min(event.clientY, window.innerHeight - 290)),
     };
   }
 
@@ -384,6 +384,7 @@
     <hr />
     <button onclick={() => act('openFolder')}>{t('tile.menu.openFolder')}</button>
     <button onclick={() => act('copySessionId')}>{t('tile.menu.copySessionId')}</button>
+    <button onclick={() => act('fork')} title={t('tile.forkHint')}>{t('tile.menu.fork')}</button>
     {#if tile.jobId !== null}
       <hr />
       <button onclick={() => act('stop')}>{t('tile.menu.stopBackground')}</button>
