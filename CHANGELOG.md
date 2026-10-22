@@ -3,6 +3,13 @@
 All notable changes to AgentTiles. Versions follow [Semantic Versioning](https://semver.org/); entries are written
 by release-please from the pull request titles (conventional commits).
 
+## [0.2.0](https://github.com/workedbeforepush/agenttiles/compare/v0.1.0...v0.2.0) (2026-10-22)
+
+
+### Features
+
+* ask for the hooks at every start until installed, with Don't ask again ([#13](https://github.com/workedbeforepush/agenttiles/issues/13)) ([b5ff63a](https://github.com/workedbeforepush/agenttiles/commit/b5ff63aa231db0e52d7183c2af42d934d77f66f3))
+
 ## [0.1.0](https://github.com/workedbeforepush/agenttiles/releases/tag/v0.1.0) (2026-10-21)
 
 First public version.
@@ -30,4 +37,3 @@ First public version.
   installed terminal; launcher count; XDG autostart.
 - npm package: `npm install -g agenttiles`, then `agenttiles`; `agenttiles --uninstall` removes the hooks and the
   statusline. AgentTiles checks npm for new versions and updates itself after a click.
-
