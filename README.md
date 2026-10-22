@@ -48,7 +48,8 @@ in any terminal or IDE. You don't have to start them in a special way.
   the same keys.
 - **Read plans** rendered as Markdown before you decide in the terminal.
 - **Jump to the terminal**: a click focuses the session's terminal: the exact tab in Windows Terminal (even across
-  windows), Terminal.app or iTerm2, or the terminal window on Linux.
+  windows), WezTerm, Terminal.app, iTerm2, kitty or tmux, the IDE window of the session's project, or the terminal
+  window on Linux.
 - **Background sessions** (`claude --bg`) show up as tiles with a `bg` badge: a click opens them with
   `claude attach` in a new tab, the tile menu stops them.
 
@@ -148,7 +149,7 @@ flowchart LR
 | | Windows 10/11 | macOS 🧪 | Linux 🧪 |
 |---|---|---|---|
 | Live tiles, approvals, questions, limits, stats | ✅ | ✅ | ✅ |
-| Jump to the session's terminal | ✅ exact Windows Terminal tab, any window; click again to minimize | ✅ exact tab in Terminal.app and iTerm2; other apps (VS Code, JetBrains, Ghostty, …) come to the front | ✅ the terminal window, on X11 with `xdotool` (Wayland does not allow it) |
+| Jump to the session's terminal | ✅ exact tab in Windows Terminal (any window) and WezTerm; IDEs (Rider, VS Code, …): the window of the session's project; click again to minimize | ✅ exact tab in Terminal.app, iTerm2, WezTerm, kitty and tmux; other apps (VS Code, JetBrains, Ghostty, …) come to the front | ✅ exact pane in WezTerm, kitty and tmux; the terminal window on X11 with `xdotool` (Wayland does not allow it) |
 | Start / resume sessions | ✅ Windows Terminal | ✅ iTerm2, else Terminal.app | ✅ first installed of gnome-terminal, konsole, kitty, wezterm, alacritty, ghostty, xfce4-terminal, tilix, foot, xterm |
 | Waiting count outside the window | ✅ tray + taskbar badge | ✅ menu bar + Dock badge | ✅ tray + launcher count (where the desktop supports it) |
 | Start with system login | ✅ | ✅ | ✅ XDG autostart |
@@ -162,6 +163,13 @@ Notes:
   Settings → Privacy & Security → Automation). AgentTiles takes the `PATH` from your login shell, so `node` and
   `claude` from Homebrew, nvm or Claude's installer are found even when AgentTiles starts from the Dock.
 - **Linux:** install `xdotool` for the terminal jump (`sudo apt install xdotool` or your distribution's package).
+- **kitty** answers only with remote control on a socket: add `allow_remote_control socket-only` and
+  `listen_on unix:/tmp/kitty` to `kitty.conf` and restart kitty. Without it, the kitty window comes to the front.
+- **tmux:** AgentTiles shows the session's pane in the tmux client you used last (default tmux server only), then
+  brings up the terminal that client runs in.
+- **IDE terminals** (VS Code, Rider and other JetBrains IDEs): neither offers a way for another app to pick one of
+  their terminal tabs without an extension or plugin, so the jump brings the IDE window to the front. On Windows it is
+  the project window whose title names the session's folder (or a parent folder).
 
 ## Keyboard
 
@@ -232,7 +240,7 @@ start reading; see [CONTRIBUTING.md](CONTRIBUTING.md) for the project layout.
 
 - Installers on GitHub Releases, winget and Homebrew
 - Confirm macOS and Linux on real machines and drop the "experimental" label
-- Exact tab selection in more terminals (WezTerm, kitty, tmux) and IDE terminals
+- Exact tab selection in IDE terminals
 
 Ideas and votes are welcome in [Discussions](https://github.com/workedbeforepush/agenttiles/discussions) and
 [Issues](https://github.com/workedbeforepush/agenttiles/issues).

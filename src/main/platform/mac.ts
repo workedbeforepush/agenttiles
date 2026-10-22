@@ -1,8 +1,8 @@
-// macOS: jump to the session's tab in Terminal.app or iTerm2 (AppleScript), bring other host apps to the front,
-// and open new sessions in iTerm2 (when it runs) or Terminal.app.
+// macOS: jump to the session's tab in Terminal.app, iTerm2 (AppleScript), WezTerm, kitty or tmux, bring other host
+// apps to the front, and open new sessions in iTerm2 (when it runs) or Terminal.app.
 import { existsSync } from 'node:fs';
 import type { TerminalTarget } from '../../core/types';
-import { ancestors, processTable, run, ttyOf, type UnixProcess } from './unix';
+import { ancestors, processTable, run, selectTerminalPane, sessionTerminal, type UnixProcess } from './unix';
 
 export type MacTerminal = 'Terminal' | 'iTerm2';
 
@@ -104,18 +104,20 @@ export function openScript(terminal: MacTerminal, cwd: string, command: string[]
 export type MacFocus = 'focused' | 'notFound';
 
 /**
- * Brings the session's terminal to the front. Terminal.app and iTerm2 switch to the exact tab (the first time,
- * macOS asks the user to allow AgentTiles to control the terminal); other hosts (VS Code, JetBrains, Ghostty, ...) are
- * brought to the front as an app.
+ * Brings the session's terminal to the front. A session in tmux is first shown in the tmux client used last, whose
+ * terminal is then the one to bring up. Terminal.app and iTerm2 switch to the exact tab (the first time, macOS asks
+ * the user to allow AgentTiles to control the terminal), WezTerm and kitty to the exact pane; other hosts (VS Code,
+ * JetBrains, Ghostty, ...) are brought to the front as an app.
  */
 export async function focusSession(pid: number): Promise<MacFocus> {
-  const chain = ancestors(pid, await processTable());
+  const target = await sessionTerminal(pid);
+  const chain = ancestors(target.pid, await processTable());
   const bundle = hostApp(chain);
   if (!bundle) return 'notFound';
+  await selectTerminalPane(target, chain).catch(() => undefined);
   const terminal = terminalOf(bundle);
-  const tty = terminal ? await ttyOf(pid) : null;
-  if (terminal && tty && /^\/dev\/ttys\d+$/.test(tty)) {
-    const result = await run('osascript', ['-e', selectTabScript(terminal, tty)]).catch(() => 'none');
+  if (terminal && target.tty && /^\/dev\/ttys\d+$/.test(target.tty)) {
+    const result = await run('osascript', ['-e', selectTabScript(terminal, target.tty)]).catch(() => 'none');
     if (result.trim() === 'ok') return 'focused';
   }
   await run('open', ['-a', bundle]);

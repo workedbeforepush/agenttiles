@@ -1,4 +1,5 @@
-// Platform dispatch: Windows (Win32 + Windows Terminal), macOS (Terminal.app / iTerm2) and Linux (X11 + xdotool).
+// Platform dispatch: Windows (Win32 + Windows Terminal, WezTerm), macOS (Terminal.app / iTerm2) and Linux (X11 +
+// xdotool); tmux, WezTerm and kitty panes on macOS and Linux.
 import type { TerminalTarget } from '../../core/types';
 import { log } from '../log';
 
@@ -120,10 +121,34 @@ export function matchableTitles(titles: string[]): string[] {
 }
 
 /**
- * Toggles the window hosting a Claude Code session: brings it to front (selecting the Windows Terminal tab), or
- * minimizes it when AgentTiles showed exactly this session last and the window is still frontmost on its monitor.
+ * Of several windows of one app (IDE project windows: "Shop.Api – Program.cs", "app - Visual Studio Code"), the one
+ * whose title names the session's folder or, failing that, its nearest parent folder; null when none does. The name
+ * has to stand alone in the title, so folder "app" does not pick window "app.web".
  */
-export async function focusSession(sessionId: string, pid: number, sessionTitles: string[]): Promise<FocusResult> {
+export function windowForFolder(titles: string[], cwd: string): number | null {
+  const folders = cwd.split(/[\\/]/).filter((part) => part.length > 0 && !/^[A-Za-z]:$/.test(part)).reverse();
+  for (const folder of folders) {
+    const index = titles.findIndex((title) => namesFolder(title, folder));
+    if (index >= 0) return index;
+  }
+  return null;
+}
+
+/** True when `folder` occurs in `title` with a space, bracket or the title's edge on both sides. */
+function namesFolder(title: string, folder: string): boolean {
+  const edge = (char: string | undefined): boolean => char === undefined || /[\s()[\]]/.test(char);
+  for (let at = title.indexOf(folder); at >= 0; at = title.indexOf(folder, at + 1)) {
+    if (edge(title[at - 1]) && edge(title[at + folder.length])) return true;
+  }
+  return false;
+}
+
+/**
+ * Toggles the window hosting a Claude Code session: brings it to front (selecting the Windows Terminal tab or
+ * WezTerm pane, or the IDE window of the session's folder), or minimizes it when AgentTiles showed exactly this
+ * session last and the window is still frontmost on its monitor.
+ */
+export async function focusSession(sessionId: string, pid: number, cwd: string, sessionTitles: string[]): Promise<FocusResult> {
   const titles = matchableTitles(sessionTitles);
   if (mac) return mac.focusSession(pid);
   if (linux) return linux.focusSession(pid, titles);
@@ -144,10 +169,22 @@ export async function focusSession(sessionId: string, pid: number, sessionTitles
     }
   }
 
-  const terminal = host.exe.toLowerCase() === 'windowsterminal.exe' && titles.length > 0;
+  const exe = host.exe.toLowerCase();
+  const terminal = exe === 'windowsterminal.exe' && titles.length > 0;
   if (!terminal || selectingTab) {
-    win.bringToFront(first);
-    lastFocus = { sessionId, hwnd: win.hwndValue(first) };
+    let target = first;
+    if (exe === 'wezterm-gui.exe' && titles.length > 0) {
+      const selected = await win.selectWezTermPane(host, titles).catch((error: Error) => {
+        log.debug(`WezTerm pane selection failed: ${error.message}`);
+        return null;
+      });
+      target = selected ?? first;
+    } else if (host.hwnds.length > 1) {
+      const index = windowForFolder(host.hwnds.map((h) => win?.windowTitle(h) ?? ''), cwd);
+      target = index === null ? first : (host.hwnds[index] ?? first);
+    }
+    win.bringToFront(target);
+    lastFocus = { sessionId, hwnd: win.hwndValue(target) };
     return 'focused';
   }
   // One Windows Terminal process can own several windows: the matching tab decides which window comes to front.

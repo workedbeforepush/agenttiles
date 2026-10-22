@@ -68,5 +68,13 @@ Facts learned the hard way; check before building on the opposite.
 - The `electron` package downloads its binary on the first `require` and prints that on stdout; the `agenttiles`
   command requires it only when it starts the app. `--uninstall` is plain Node: Electron can crash on Windows when it
   exits right after start without a window.
+- Tab jump outside Windows Terminal: `wezterm cli list --format json` has no pane pid, only `tty_name` (matched on
+  macOS/Linux) and the pane `title` (matched on Windows); `wezterm cli activate-pane` switches tab and pane, the OS
+  window is raised separately. kitty takes remote control only over a socket set up by the user (`listen_on`, which
+  gets `-<kitty pid>` appended); its address reaches the processes in kitty windows as `KITTY_LISTEN_ON`. tmux
+  `switch-client -t %<pane>` changes session, window and pane at once.
+- IDE terminals cannot be picked from outside: VS Code's CLI and `vscode://` URLs have no terminal target, the
+  JetBrains built-in server has no terminal endpoint, and JetBrains windows show no UI Automation tree (Swing).
+  A Rider session runs under `rider64.exe` → shell; its project window is titled "<project> – <file>".
 - Pull requests and tags created with `GITHUB_TOKEN` start no workflows; release-please uses the
   `RELEASE_PLEASE_TOKEN` secret so CI runs on its release PR.

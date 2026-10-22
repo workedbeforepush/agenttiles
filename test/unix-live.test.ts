@@ -4,8 +4,9 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { adoptLoginShellPath, ancestors, processTable } from '../src/main/platform/unix';
+import { adoptLoginShellPath, ancestors, onPath, processTable } from '../src/main/platform/unix';
 import { openScript, selectTabScript } from '../src/main/platform/mac';
+import { TMUX_CLIENTS_ARGS, TMUX_PANES_ARGS, parseTmuxClients, parseTmuxPanes } from '../src/main/platform/tmux';
 
 describe.skipIf(process.platform === 'win32')('unix helpers on this machine', () => {
   it('reads the process table and finds this process with its parents', async () => {
@@ -27,6 +28,24 @@ describe.skipIf(process.platform === 'win32')('unix helpers on this machine', ()
     } finally {
       Object.assign(process.env, saved);
       rmSync(home, { recursive: true, force: true });
+    }
+  });
+});
+
+describe.skipIf(process.platform === 'win32' || !onPath('tmux'))('tmux on this machine', () => {
+  it('lists panes in the format AgentTiles parses', () => {
+    // A server of its own (-L), so a tmux the developer runs is left alone.
+    const tmux = (args: string[]): string => execFileSync('tmux', ['-L', `agenttiles-${process.pid}`, ...args], { encoding: 'utf8' });
+    tmux(['new-session', '-d', '-s', 'agent tiles', 'sleep 30']);
+    try {
+      const panes = parseTmuxPanes(tmux(TMUX_PANES_ARGS));
+      expect(panes).toHaveLength(1);
+      expect(panes[0]?.session).toBe('agent tiles');
+      expect(panes[0]?.paneId).toMatch(/^%\d+$/);
+      expect(panes[0]?.tty).toMatch(/^\/dev\//);
+      expect(parseTmuxClients(tmux(TMUX_CLIENTS_ARGS))).toEqual([]);
+    } finally {
+      tmux(['kill-server']);
     }
   });
 });

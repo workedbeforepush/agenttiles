@@ -1,7 +1,8 @@
 // Win32 helpers via koffi: process table, process start time, host window lookup and focus.
 import koffi from 'koffi';
-import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
+import { execFile, execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import type { TerminalTarget } from '../../core/types';
+import { WEZTERM_LIST_ARGS, findWezTermPane, parseWezTermPanes, siblingExecutable, weztermActivateArgs } from './wezterm';
 import { wtArgs } from './wt';
 
 const kernel32 = koffi.load('kernel32.dll');
@@ -31,6 +32,9 @@ const GetProcessTimes = kernel32.func(
   'bool __stdcall GetProcessTimes(HANDLE h, _Out_ FILETIME *creation, _Out_ FILETIME *exit, _Out_ FILETIME *kernel, _Out_ FILETIME *user)',
 );
 const GetExitCodeProcess = kernel32.func('bool __stdcall GetExitCodeProcess(HANDLE h, _Out_ uint32 *code)');
+const QueryFullProcessImageNameW = kernel32.func(
+  'bool __stdcall QueryFullProcessImageNameW(HANDLE h, uint32 flags, _Out_ void *name, _Inout_ uint32 *size)',
+);
 const CreateToolhelp32Snapshot =kernel32.func('HANDLE __stdcall CreateToolhelp32Snapshot(uint32 flags, uint32 pid)');
 const Process32FirstW = kernel32.func('bool __stdcall Process32FirstW(HANDLE snap, _Inout_ PROCESSENTRY32W *entry)');
 const Process32NextW = kernel32.func('bool __stdcall Process32NextW(HANDLE snap, _Inout_ PROCESSENTRY32W *entry)');
@@ -46,6 +50,7 @@ const IsWindowVisible = user32.func('bool __stdcall IsWindowVisible(HWND hwnd)')
 const IsIconic = user32.func('bool __stdcall IsIconic(HWND hwnd)');
 const GetWindow = user32.func('HWND __stdcall GetWindow(HWND hwnd, uint32 cmd)');
 const GetWindowTextLengthW = user32.func('int __stdcall GetWindowTextLengthW(HWND hwnd)');
+const GetWindowTextW = user32.func('int __stdcall GetWindowTextW(HWND hwnd, _Out_ void *text, int max)');
 const ShowWindow = user32.func('bool __stdcall ShowWindow(HWND hwnd, int cmd)');
 const SetForegroundWindow = user32.func('bool __stdcall SetForegroundWindow(HWND hwnd)');
 const BringWindowToTop = user32.func('bool __stdcall BringWindowToTop(HWND hwnd)');
@@ -83,6 +88,7 @@ function isRegularWindow(hwnd: Hwnd): boolean {
 const INVALID_HANDLE = -1n;
 const STILL_ACTIVE = 259;
 const TAB_SELECT_TIMEOUT_MS = 10_000;
+const CLI_TIMEOUT_MS = 5000;
 
 type Hwnd = unknown;
 
@@ -127,6 +133,20 @@ export function processTable(): Map<number, ProcessInfo> {
     CloseHandle(snap);
   }
   return table;
+}
+
+/** Full path of a process's executable, or null when the process is gone or not readable. */
+export function executablePath(pid: number): string | null {
+  const handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
+  if (!handle) return null;
+  try {
+    const name = Buffer.alloc(32_768 * 2);
+    const size = [32_768];
+    if (!QueryFullProcessImageNameW(handle, 0, name, size)) return null;
+    return name.toString('utf16le', 0, (size[0] ?? 0) * 2);
+  } finally {
+    CloseHandle(handle);
+  }
 }
 
 export function claudeProcessIds(): number[] {
@@ -185,6 +205,7 @@ export interface HostWindows {
   /** All top-level windows of the hosting process, most recently active first. One process can own several. */
   hwnds: Hwnd[];
   exe: string;
+  pid: number;
 }
 
 /**
@@ -196,10 +217,10 @@ export function findHostWindows(pid: number): HostWindows | null {
   const windows = topLevelWindows();
   for (const proc of ancestry(pid, table)) {
     const hwnds = windows.get(proc.pid);
-    if (hwnds && hwnds.length > 0) return { hwnds, exe: proc.exe };
+    if (hwnds && hwnds.length > 0) return { hwnds, exe: proc.exe, pid: proc.pid };
   }
   const console = consoleWindowOf(pid);
-  return console ? { hwnds: [console], exe: 'conhost.exe' } : null;
+  return console ? { hwnds: [console], exe: 'conhost.exe', pid } : null;
 }
 
 export function bringToFront(hwnd: Hwnd): void {
@@ -257,6 +278,38 @@ export function isFrontmost(hwnd: Hwnd, ignorePid: number): boolean {
 
 export function hwndValue(hwnd: Hwnd): string {
   return koffi.address(hwnd).toString();
+}
+
+export function windowTitle(hwnd: Hwnd): string {
+  const max = GetWindowTextLengthW(hwnd) + 1;
+  const text = Buffer.alloc(max * 2);
+  const length = GetWindowTextW(hwnd, text, max);
+  return text.toString('utf16le', 0, length * 2);
+}
+
+function run(file: string, args: string[]): Promise<string> {
+  return new Promise((resolve, reject) => {
+    execFile(file, args, { encoding: 'utf8', timeout: CLI_TIMEOUT_MS, windowsHide: true }, (error, stdout) => {
+      if (error) reject(error);
+      else resolve(stdout);
+    });
+  });
+}
+
+/**
+ * Activates the WezTerm pane whose title matches one of the given titles (a Windows process has no tty to match by)
+ * through the `wezterm` CLI next to wezterm-gui.exe, and resolves the window holding it, or null when no pane matched.
+ * WezTerm's window ids are its own, so the window is found by the title it had before the switch.
+ */
+export async function selectWezTermPane(host: HostWindows, titles: string[]): Promise<Hwnd | null> {
+  const gui = executablePath(host.pid);
+  if (!gui) return null;
+  const cli = siblingExecutable(gui, 'wezterm.exe');
+  const pane = findWezTermPane(parseWezTermPanes(await run(cli, WEZTERM_LIST_ARGS)), null, titles);
+  if (!pane) return null;
+  const hwnd = host.hwnds.find((h) => windowTitle(h) === pane.windowTitle) ?? null;
+  await run(cli, weztermActivateArgs(pane.paneId));
+  return hwnd;
 }
 
 // Runs for the app's lifetime: starting PowerShell and loading UI Automation takes about a second, the tab search
