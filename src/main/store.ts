@@ -30,6 +30,7 @@ import {
 } from '../core/session';
 import type { DecisionExtras, PermissionDecision } from '../core/protocol';
 import { addSample, limitEta, type UsageSample } from '../core/forecast';
+import { countStates } from '../core/counters';
 import { isAlive } from './platform';
 import type { ConfigStore } from './config';
 import { dateOf, type DailyStats } from './daily';
@@ -685,11 +686,8 @@ export class SessionStore {
   }
 
   private header(tiles: TileView[]): HeaderView {
-    const count = (...states: SessionState[]): number => tiles.filter((t) => states.includes(t.state)).length;
     return {
-      working: count('working', 'compacting'),
-      waiting: count('needsApproval', 'needsInput'),
-      done: count('done'),
+      ...countStates(tiles.map((t) => t.state)),
       fiveHour: this.fiveHour,
       sevenDay: this.sevenDay,
       fiveHourEta: limitEta(this.fiveHourSamples, this.fiveHour?.resetsAt ? this.fiveHour.resetsAt * 1000 : null),

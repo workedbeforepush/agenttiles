@@ -14,7 +14,8 @@
   import WithCode from './components/WithCode.svelte';
   import { setLocale, t } from './i18n.svelte';
   import { snapshot as demoSnapshot } from '../../core/demo';
-  import { filterTiles, groupTiles, paginate, type StatusFilter } from './layout';
+  import { filterTiles, groupTiles, paginate } from './layout';
+  import type { StatusFilter } from '../../core/counters';
   import { NEEDS_YOU, paintTaskbarBadge, paintTrayIcon } from './format';
   import { SOUND_PRIORITY, playCue } from './sounds';
   import { comboOf } from './keys';
