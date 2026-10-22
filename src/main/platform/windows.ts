@@ -191,6 +191,12 @@ function topLevelWindows(): Map<number, Hwnd[]> {
   return byPid;
 }
 
+/**
+ * Ancestors whose windows never host a session: explorer.exe owns the desktop ("Program Manager"), and sessions
+ * started from it (Win+R, a shortcut) are handed to the default terminal, so focusing it would show the desktop.
+ */
+const NOT_HOSTS = new Set(['explorer.exe']);
+
 function consoleWindowOf(pid: number): Hwnd | null {
   if (!AttachConsole(pid)) return null;
   try {
@@ -216,11 +222,25 @@ export function findHostWindows(pid: number): HostWindows | null {
   const table = processTable();
   const windows = topLevelWindows();
   for (const proc of ancestry(pid, table)) {
+    if (NOT_HOSTS.has(proc.exe.toLowerCase())) continue;
     const hwnds = windows.get(proc.pid);
     if (hwnds && hwnds.length > 0) return { hwnds, exe: proc.exe, pid: proc.pid };
   }
   const console = consoleWindowOf(pid);
-  return console ? { hwnds: [console], exe: 'conhost.exe', pid } : null;
+  if (!console) return null;
+  // A console handed to the default terminal (Windows Terminal) is a hidden ConPTY window owned by the terminal
+  // window that shows it; that window and its process are the host, with the owning window first.
+  const owner = GetWindow(console, GW_OWNER);
+  if (owner) {
+    const out = [0];
+    GetWindowThreadProcessId(owner, out);
+    const hostPid = out[0] ?? 0;
+    const host = table.get(hostPid);
+    const ownerValue = hwndValue(owner);
+    const others = (windows.get(hostPid) ?? []).filter((h) => hwndValue(h) !== ownerValue);
+    if (host) return { hwnds: [owner, ...others], exe: host.exe, pid: hostPid };
+  }
+  return { hwnds: [console], exe: 'conhost.exe', pid };
 }
 
 export function bringToFront(hwnd: Hwnd): void {
