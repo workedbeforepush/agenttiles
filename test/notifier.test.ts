@@ -1,8 +1,19 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { TileView } from '../src/core/types';
 
-vi.mock('electron', () => ({ Notification: class {} }));
-const { toastText } = await import('../src/main/notifier');
+const shown = vi.hoisted(() => [] as { title: string; body: string }[]);
+vi.mock('electron', () => ({
+  Notification: class {
+    static isSupported = (): boolean => true;
+    constructor(private readonly options: { title: string; body: string }) {}
+    on(): void {}
+    show(): void {
+      shown.push({ title: this.options.title, body: this.options.body });
+    }
+  },
+}));
+const { Notifier, toastText, updateText } = await import('../src/main/notifier');
+const { DEFAULT_SETTINGS } = await import('../src/main/config');
 
 function tile(extra: Partial<TileView>): TileView {
   return {
@@ -76,5 +87,23 @@ describe('toast text', () => {
       ),
     ).toEqual({ title: 'Demo · question', body: 'Which color? (+1 more)' });
     expect(toastText(tile({ state: 'error', activity: { kind: 'text', text: 'overloaded' } }))).toEqual({ title: 'Demo · error', body: 'overloaded' });
+  });
+});
+
+describe('update toast', () => {
+  it('announces the version, also while the window has focus, and only with toasts on', () => {
+    expect(updateText('0.3.0')).toEqual({ title: 'AgentTiles 0.3.0 is available', body: 'Click to update.' });
+    let toasts = true;
+    const notifier = new Notifier(
+      () => ({ ...DEFAULT_SETTINGS, toasts }),
+      () => true,
+      () => undefined,
+    );
+    shown.length = 0;
+    expect(notifier.update('0.3.0', () => undefined)).toBe(true);
+    expect(shown).toEqual([{ title: 'AgentTiles 0.3.0 is available', body: 'Click to update.' }]);
+    toasts = false;
+    expect(notifier.update('0.4.0', () => undefined)).toBe(false);
+    expect(shown).toHaveLength(1);
   });
 });

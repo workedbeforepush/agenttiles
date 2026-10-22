@@ -29,6 +29,10 @@ export interface Config {
   hookPromptOff: boolean;
   /** The welcome tour ran (finished or skipped); Settings can replay it. */
   tourDone: boolean;
+  /** The newest version an update toast announced: each version gets one toast, also across restarts. */
+  updateAnnounced: string | null;
+  /** The version whose update card the user closed; a newer version shows the card again. */
+  updateDismissed: string | null;
   pins: string[];
   /** Manual tile order (drag and drop), session ids. */
   order: string[];
@@ -167,6 +171,8 @@ export class ConfigStore {
         settings: { ...DEFAULT_SETTINGS },
         hookPromptOff: false,
         tourDone: false,
+        updateAnnounced: null,
+        updateDismissed: null,
         pins: [],
         order: [],
         hiddenProjects: [],
@@ -187,6 +193,8 @@ export class ConfigStore {
       settings: normaliseSettings((raw['settings'] ?? {}) as Record<string, unknown>),
       hookPromptOff: state['hookPromptOff'] === true,
       tourDone: state['tourDone'] === true,
+      updateAnnounced: typeof state['updateAnnounced'] === 'string' ? state['updateAnnounced'] : null,
+      updateDismissed: typeof state['updateDismissed'] === 'string' ? state['updateDismissed'] : null,
       pins: stringList(state['pins']),
       order: stringList(state['order']),
       hiddenProjects: stringList(state['hiddenProjects']),
@@ -201,7 +209,16 @@ export class ConfigStore {
     const c = this.config;
     const doc: Record<string, unknown> = {
       settings: c.settings,
-      state: { hookPromptOff: c.hookPromptOff, tourDone: c.tourDone, pins: c.pins, order: c.order, hiddenProjects: c.hiddenProjects },
+      state: {
+        hookPromptOff: c.hookPromptOff,
+        tourDone: c.tourDone,
+        // TOML has no null: no announced version is no key.
+        ...(c.updateAnnounced !== null ? { updateAnnounced: c.updateAnnounced } : {}),
+        ...(c.updateDismissed !== null ? { updateDismissed: c.updateDismissed } : {}),
+        pins: c.pins,
+        order: c.order,
+        hiddenProjects: c.hiddenProjects,
+      },
       renames: c.renames,
     };
     if (c.window) doc['window'] = c.window;

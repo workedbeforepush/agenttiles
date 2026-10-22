@@ -25,4 +25,10 @@ export const app = {
     install: 'Install hooks and statusline',
   },
   trayTooltip: 'AgentTiles · {working} working · {waiting} waiting · {done} done',
+  update: {
+    available: 'AgentTiles {version} is out · click to update',
+    failed: 'The update did not work · click for details',
+    whatsNew: 'What’s new',
+    dismiss: 'Dismiss',
+  },
 };

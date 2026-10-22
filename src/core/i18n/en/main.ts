@@ -35,6 +35,7 @@ export const main = {
     failedDetail: 'npm said:\n{output}\n\nUpdate in a terminal with:\n{command}',
     manualDetail: 'Update in a terminal with:\n{command}',
     copyCommand: 'Copy command',
+    whatsNew: "What's new",
     close: 'Close',
   },
   update: {

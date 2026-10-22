@@ -15,7 +15,9 @@ vi.mock('node:child_process', async (importActual) => ({
     return child;
   },
 }));
-const { Updater, cmdArgs, compareVersions, latestVersion, updateCommand, updateScript } = await import('../src/main/updater');
+const { Updater, cmdArgs, compareVersions, latestVersion, releaseUrl, shouldAnnounce, updateCommand, updateScript } = await import(
+  '../src/main/updater'
+);
 
 describe('versions', () => {
   it('compares x.y.z numerically and puts pre-releases before their release', () => {
@@ -35,6 +37,23 @@ describe('versions', () => {
     expect(latestVersion({ version: 140 })).toBeNull();
     expect(latestVersion({})).toBeNull();
     expect(latestVersion(null)).toBeNull();
+  });
+});
+
+describe('update notice', () => {
+  it('announces each newer version once', () => {
+    expect(shouldAnnounce('0.3.0', null)).toBe(true);
+    expect(shouldAnnounce('0.3.0', '0.3.0')).toBe(false);
+    expect(shouldAnnounce('0.3.0', '0.4.0')).toBe(false);
+    expect(shouldAnnounce('0.4.0', '0.3.0')).toBe(true);
+    expect(shouldAnnounce('1.0.0', '1.0.0-beta.1')).toBe(true);
+  });
+
+  it('links the GitHub release of an x.y.z version and nothing else', () => {
+    expect(releaseUrl('0.3.0')).toBe('https://github.com/workedbeforepush/agenttiles/releases/tag/v0.3.0');
+    expect(releaseUrl('1.0.0-beta.1')).toBe('https://github.com/workedbeforepush/agenttiles/releases/tag/v1.0.0-beta.1');
+    expect(() => releaseUrl('0.3.0/../../evil')).toThrow();
+    expect(() => releaseUrl('latest')).toThrow();
   });
 });
 
@@ -78,6 +97,19 @@ describe('updater', () => {
       expect(view.available).toBeNull();
       // The marker is consumed: the next start does not report it again.
       expect(new Updater(dir, dir, '0.2.0').view().failed).toBeNull();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('translates the note for a failed update without npm output when the view is built', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'agenttiles-update-'));
+    try {
+      writeFileSync(join(dir, 'update.json'), JSON.stringify({ target: '0.3.0' }));
+      const updater = new Updater(dir, dir, '0.2.0');
+      expect(updater.view().failed).toBe('npm did not install the update.');
+      // A language switch after start: the next view speaks the new language.
+      expect(updater.view((key) => `de:${key}`).failed).toBe('de:main.update.npmNoInstall');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

@@ -58,6 +58,10 @@ export interface AgentTilesApi {
   getUpdate(): Promise<UpdateView>;
   /** Sent after each update check (at start and every 6 hours). */
   onUpdate(listener: (update: UpdateView) => void): void;
+  /** Opens the release notes of the available version in the browser. */
+  openReleaseNotes(): Promise<void>;
+  /** Hides the update card until a newer version is out. */
+  dismissUpdate(): Promise<void>;
   /** Starts the update (global npm install) or shows how to update by hand. */
   runUpdate(): Promise<void>;
   /** Statistics of the last 7 or 30 days. */

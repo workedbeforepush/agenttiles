@@ -22,6 +22,7 @@ import type {
   SettingsView,
   Snapshot,
   TileAction,
+  UpdateView,
 } from '../core/types';
 import { ConfigStore, normaliseSettings } from './config';
 import { DailyStats } from './daily';
@@ -39,7 +40,7 @@ import { attachSession, launchSession, recentSessions, stopSession } from './lau
 import { focusSession, initPlatform, registerAppIdentity, setLinuxAutostart, setTerminalTarget } from './platform';
 import { APP_ID, APP_NAME, persistentIcons } from './appId';
 import { SessionStore } from './store';
-import { Updater } from './updater';
+import { Updater, releaseUrl, shouldAnnounce } from './updater';
 import { AppTray } from './tray';
 import { locale, setLocale, t } from './i18n';
 import { resolveLocale } from '../core/i18n';
@@ -259,6 +260,10 @@ async function start(): Promise<void> {
     settings: () => {
       showWindow();
       win.webContents.send('open-settings');
+    },
+    update: () => {
+      showWindow();
+      void runUpdate();
     },
     quit: () => app.quit(),
   });
@@ -482,12 +487,33 @@ async function start(): Promise<void> {
   ipcMain.handle('limits:refresh', () => probe());
 
   const updater = new Updater(userData, app.getAppPath(), app.getVersion());
-  const sendUpdate = (): void => {
-    if (!win.isDestroyed()) win.webContents.send('update', updater.view());
+  const updateView = (): UpdateView => {
+    const view = updater.view();
+    return { ...view, dismissed: view.available !== null && view.available === config.config.updateDismissed };
   };
-  const checkUpdate = (): Promise<void> => updater.check().then(sendUpdate);
-  ipcMain.handle('update:get', () => updater.view());
-  ipcMain.handle('update:run', async () => {
+  const sendUpdate = (): void => {
+    if (!win.isDestroyed()) win.webContents.send('update', updateView());
+  };
+  const updateChecked = (): void => {
+    const view = updateView();
+    sendUpdate();
+    tray.setUpdate(view.available);
+    const version = view.available;
+    if (!version || !shouldAnnounce(version, config.config.updateAnnounced)) return;
+    // Remembered only once a toast was shown: with toasts off, turning them on announces the version later.
+    const shown = notifier.update(version, () => {
+      showWindow();
+      void runUpdate();
+    });
+    if (!shown) return;
+    config.config.updateAnnounced = version;
+    config.save();
+  };
+  const checkUpdate = (): Promise<void> => updater.check().then(updateChecked);
+  const openReleaseNotes = (version: string): Promise<void> => shell.openExternal(releaseUrl(version));
+
+  /** The update dialog of the header button, the tray item and the update toast. */
+  async function runUpdate(): Promise<void> {
     const view = updater.view();
     if (view.available && view.canInstall && !view.failed) {
       const { response } = await dialog.showMessageBox(win, {
@@ -495,10 +521,11 @@ async function start(): Promise<void> {
         title: t('main.updateDialog.title'),
         message: t('main.updateDialog.confirm', { version: view.available }),
         detail: t('main.updateDialog.confirmDetail', { command: view.command }),
-        buttons: [t('main.updateDialog.updateAndRestart'), t('main.updateDialog.later')],
+        buttons: [t('main.updateDialog.updateAndRestart'), t('main.updateDialog.whatsNew'), t('main.updateDialog.later')],
         defaultId: 0,
-        cancelId: 1,
+        cancelId: 2,
       });
+      if (response === 1) await openReleaseNotes(view.available);
       if (response !== 0) return;
       try {
         await updater.install(view.available);
@@ -519,11 +546,27 @@ async function start(): Promise<void> {
       detail: view.failed
         ? t('main.updateDialog.failedDetail', { output: view.failed, command: view.command })
         : t('main.updateDialog.manualDetail', { command: view.command }),
-      buttons: [t('main.updateDialog.copyCommand'), t('main.updateDialog.close')],
+      buttons: [
+        t('main.updateDialog.copyCommand'),
+        ...(view.available ? [t('main.updateDialog.whatsNew')] : []),
+        t('main.updateDialog.close'),
+      ],
       defaultId: 0,
-      cancelId: 1,
+      cancelId: view.available ? 2 : 1,
     });
     if (response === 0) clipboard.writeText(view.command);
+    else if (response === 1 && view.available) await openReleaseNotes(view.available);
+  }
+  ipcMain.handle('update:get', () => updateView());
+  ipcMain.handle('update:run', () => runUpdate());
+  ipcMain.handle('update:notes', async () => {
+    const version = updater.view().available;
+    if (version) await openReleaseNotes(version);
+  });
+  ipcMain.handle('update:dismiss', () => {
+    config.config.updateDismissed = updater.view().available;
+    config.save();
+    sendUpdate();
   });
 
   // Every renderer handler is registered above: the window is already loading and calls them on mount.

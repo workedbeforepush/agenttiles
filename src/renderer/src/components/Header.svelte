@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { HeaderView, RateLimit, UpdateView, ViewMode } from '../../../core/types';
+  import type { HeaderView, RateLimit, ViewMode } from '../../../core/types';
   import type { StatusFilter } from '../../../core/counters';
   import { clock, since, usd } from '../format';
   import { locale, t } from '../i18n.svelte';
@@ -17,8 +17,6 @@
     grouped: boolean;
     onGroup: () => void;
     onNewSession: () => void;
-    update: UpdateView | null;
-    onUpdate: () => void;
     onViewMode: (mode: ViewMode) => void;
     onFullscreen: () => void;
     onRefreshLimits: () => void;
@@ -38,8 +36,6 @@
     grouped,
     onGroup,
     onNewSession,
-    update,
-    onUpdate,
     onViewMode,
     onFullscreen,
     onRefreshLimits,
@@ -126,17 +122,6 @@
     <b>{usd(header.today.costUsd)}</b><span class="label">{t('header.today')}</span>
   </button>
   <div class="buttons">
-    {#if update?.failed}
-      <button class="update failed" onclick={onUpdate} title={t('header.update.failedHint')}>{t('header.update.failed')}</button>
-    {:else if update?.available}
-      <button
-        class="update"
-        onclick={onUpdate}
-        title={t('header.update.availableHint', { current: update.current, available: update.available })}
-      >
-        {t('header.update.available', { version: update.available })}
-      </button>
-    {/if}
     <button onclick={onNewSession} title={t('header.newSessionHint')} aria-label={t('header.newSession')} data-tour="newSession">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M12 5v14M5 12h14" />
@@ -294,22 +279,6 @@
   .filter.active {
     background: color-mix(in srgb, var(--c) 16%, transparent);
     border-color: color-mix(in srgb, var(--c) 55%, transparent);
-  }
-
-  .buttons button.update {
-    width: auto;
-    padding: 4px 10px;
-    border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--accent) 16%, transparent);
-    color: var(--text);
-    font-size: 12px;
-    font-weight: 600;
-  }
-
-  .buttons button.update.failed {
-    border-color: color-mix(in srgb, var(--st-error) 60%, transparent);
-    background: color-mix(in srgb, var(--st-error) 16%, transparent);
   }
 
   .buttons button.on {
