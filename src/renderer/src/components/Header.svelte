@@ -286,6 +286,11 @@
     border-color: var(--border);
   }
 
+  /* Counters left out of an active filter fade, so the filter reads as one. */
+  .group:has(.filter.active) .filter:not(.active) {
+    opacity: 0.45;
+  }
+
   .filter.active {
     background: color-mix(in srgb, var(--c) 16%, transparent);
     border-color: color-mix(in srgb, var(--c) 55%, transparent);
