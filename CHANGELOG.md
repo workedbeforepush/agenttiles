@@ -3,6 +3,21 @@
 All notable changes to AgentTiles. Versions follow [Semantic Versioning](https://semver.org/); entries are written
 by release-please from the pull request titles (conventional commits).
 
+## [0.3.0](https://github.com/workedbeforepush/agenttiles/compare/v0.2.0...v0.3.0) (2026-10-22)
+
+
+### Features
+
+* show background sessions as tiles ([#15](https://github.com/workedbeforepush/agenttiles/issues/15)) ([ba701c7](https://github.com/workedbeforepush/agenttiles/commit/ba701c7262afa1ed55225200b2ea58c82a6dfa78))
+* tidy Settings into pages with switches ([#20](https://github.com/workedbeforepush/agenttiles/issues/20)) ([54bb3ac](https://github.com/workedbeforepush/agenttiles/commit/54bb3ac7e0a8bb39fba1eacc37daedcb63b6d92e))
+* usage history from transcripts with per-model breakdown and CSV export ([#16](https://github.com/workedbeforepush/agenttiles/issues/16)) ([9017008](https://github.com/workedbeforepush/agenttiles/commit/901700852bfe1f5116c5e0cc99ec6b4071f3590a))
+* welcome tour on first start, replayable from Settings ([#19](https://github.com/workedbeforepush/agenttiles/issues/19)) ([f549d41](https://github.com/workedbeforepush/agenttiles/commit/f549d419e9632f5f0d476b44c201304e8363ed1a))
+
+
+### Bug Fixes
+
+* jump to a Windows Terminal tab without waiting for PowerShell to start ([#17](https://github.com/workedbeforepush/agenttiles/issues/17)) ([71f810d](https://github.com/workedbeforepush/agenttiles/commit/71f810d46e954726f57c9f61c2b97be9c9d3fd1a))
+
 ## [0.2.0](https://github.com/workedbeforepush/agenttiles/compare/v0.1.0...v0.2.0) (2026-10-22)
 
 
