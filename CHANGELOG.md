@@ -3,6 +3,19 @@
 All notable changes to AgentTiles. Versions follow [Semantic Versioning](https://semver.org/); entries are written
 by release-please from the pull request titles (conventional commits).
 
+## [0.6.0](https://github.com/workedbeforepush/agenttiles/compare/v0.5.0...v0.6.0) (2026-10-22)
+
+
+### Features
+
+* announce new versions with a toast, a corner note and a changelog link ([#33](https://github.com/workedbeforepush/agenttiles/issues/33)) ([674b7bc](https://github.com/workedbeforepush/agenttiles/commit/674b7bc8fac19e7b40bc94760530674a0caa5bb1))
+* jump to the exact tab in WezTerm, kitty and tmux ([#34](https://github.com/workedbeforepush/agenttiles/issues/34)) ([aa60f1d](https://github.com/workedbeforepush/agenttiles/commit/aa60f1dbc03b506dec033fa33123b57fcc125807))
+
+
+### Bug Fixes
+
+* stop showing "no hooks" for idle sessions after AgentTiles restarts ([#35](https://github.com/workedbeforepush/agenttiles/issues/35)) ([b2569f6](https://github.com/workedbeforepush/agenttiles/commit/b2569f610876a45c608be62ae60ae6c42d4ba6f6))
+
 ## [0.5.0](https://github.com/workedbeforepush/agenttiles/compare/v0.4.0...v0.5.0) (2026-10-22)
 
 
