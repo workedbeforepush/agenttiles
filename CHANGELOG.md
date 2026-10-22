@@ -3,6 +3,13 @@
 All notable changes to AgentTiles. Versions follow [Semantic Versioning](https://semver.org/); entries are written
 by release-please from the pull request titles (conventional commits).
 
+## [0.7.0](https://github.com/workedbeforepush/agenttiles/compare/v0.6.1...v0.7.0) (2026-10-22)
+
+
+### Features
+
+* keep ended sessions as tiles with resume and fork ([#41](https://github.com/workedbeforepush/agenttiles/issues/41)) ([ddb851f](https://github.com/workedbeforepush/agenttiles/commit/ddb851f37c614e6f16a66eeb2585126a3e8c1764))
+
 ## [0.6.1](https://github.com/workedbeforepush/agenttiles/compare/v0.6.0...v0.6.1) (2026-10-22)
 
 
