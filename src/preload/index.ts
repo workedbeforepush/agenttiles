@@ -28,6 +28,7 @@ const api: AgentTilesApi = {
     ipcRenderer.send('status:icons', trayPng, tooltip, taskbarBadgePng, waiting),
   runDoctor: () => ipcRenderer.invoke('doctor:run'),
   getStats: (days) => ipcRenderer.invoke('stats:get', days),
+  exportUsage: () => ipcRenderer.invoke('stats:export'),
   getUpdate: () => ipcRenderer.invoke('update:get'),
   onUpdate: (listener) => {
     ipcRenderer.on('update', (_event, update) => listener(update));

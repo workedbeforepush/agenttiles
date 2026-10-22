@@ -61,7 +61,7 @@ describe('daily stats robustness', () => {
       const stats = new DailyStats(dir, () => now);
       now = new Date(2026, 9, 21, 1, 0).getTime();
       stats.addStateTime('working', 3 * 3_600_000, 'web'); // 22:00 -> 01:00
-      const days = stats.stats(2).days;
+      const days = stats.days(2);
       expect(days[0]?.projects['web']?.workingMs).toBe(2 * 3_600_000);
       expect(days[1]?.projects['web']?.workingMs).toBe(3_600_000);
       stats.flush();
@@ -73,7 +73,7 @@ describe('daily stats robustness', () => {
       const stats = new DailyStats(dir);
       stats.turn('__proto__');
       stats.turn('constructor');
-      const projects = stats.stats(1).days[0]?.projects ?? {};
+      const projects = stats.days(1)[0]?.projects ?? {};
       expect(projects['__proto__']?.turns).toBe(1);
       expect(projects['constructor']?.turns).toBe(1);
       expect(({} as Record<string, unknown>)['turns']).toBeUndefined();
@@ -88,8 +88,8 @@ describe('daily stats robustness', () => {
       const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
       const date = `${yesterday.getFullYear()}-${pad(yesterday.getMonth() + 1)}-${pad(yesterday.getDate())}`;
       writeFileSync(join(dir, 'history.json'), JSON.stringify({ days: [{ date, projects: { web: { costUsd: 'x', turns: 2 } } }, { date: 'bad' }] }));
-      const day = new DailyStats(dir).stats(2).days[0];
-      expect(day?.projects['web']).toEqual({ costUsd: 0, turns: 2, workingMs: 0, waitingMs: 0 });
+      const day = new DailyStats(dir).days(2)[0];
+      expect(day?.projects['web']).toEqual({ turns: 2, workingMs: 0, waitingMs: 0 });
     });
   });
 });

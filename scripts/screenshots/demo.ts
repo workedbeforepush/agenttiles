@@ -3,6 +3,7 @@ import type {
   DaySummary,
   HistoryPoint,
   LaunchView,
+  ModelUsage,
   PendingPermission,
   SessionState,
   SettingsView,
@@ -443,7 +444,27 @@ export function stats(now: number, days: number): StatsView {
     }
     result.push(day);
   }
-  return { days: result, recordedSince: result[0]!.date };
+  const total = result.reduce((sum, d) => sum + Object.values(d.projects).reduce((s, p) => s + p.costUsd, 0), 0);
+  // Split like a typical mix: mostly Opus, some Sonnet subagents, a little Haiku. Tokens follow the list prices.
+  const model = (share: number, input: number, output: number, read: number): ModelUsage => {
+    const cost = total * share;
+    return {
+      inputTokens: Math.round((cost * 0.05) / input * 1e6),
+      outputTokens: Math.round((cost * 0.45) / output * 1e6),
+      cacheWriteTokens: Math.round((cost * 0.2) / (input * 1.25) * 1e6),
+      cacheReadTokens: Math.round((cost * 0.3) / (input * read) * 1e6),
+      costUsd: cost,
+    };
+  };
+  return {
+    days: result,
+    models: {
+      'claude-opus-5-5': model(0.78, 4, 20, 0.05),
+      'claude-sonnet-5-5': model(0.19, 2, 10, 0.05),
+      'claude-haiku-5-5': model(0.03, 0.1, 0.5, 0.1),
+    },
+    recordedSince: result[0]!.date,
+  };
 }
 
 export function launchView(now: number): LaunchView {

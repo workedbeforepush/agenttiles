@@ -12,7 +12,7 @@ import {
 } from 'node:fs';
 import { open } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { DecisionRequest, HeaderView, RateLimit, SessionState, Snapshot, StatsView, TileView } from '../core/types';
+import type { DecisionRequest, HeaderView, ProjectDay, RateLimit, SessionState, Snapshot, StatsView, TileView } from '../core/types';
 import { toolDiff } from '../core/diff';
 import { isRegistryFileName, parseRegistryEntry, type RegistryEntry } from '../core/registry';
 import { applyTranscriptLine, emptyTranscriptInfo } from '../core/transcript';
@@ -32,12 +32,16 @@ import type { DecisionExtras, PermissionDecision } from '../core/protocol';
 import { addSample, limitEta, type UsageSample } from '../core/forecast';
 import { isAlive } from './platform';
 import type { ConfigStore } from './config';
-import type { DailyStats } from './daily';
+import { dateOf, type DailyStats } from './daily';
+import type { UsageLog } from './usage';
+import { projectCost } from '../core/usage';
 import type { LimitsCache } from './limits';
 import { log } from './log';
 import { readGitBranch } from './git';
 
 const POLL_MS = 2000;
+/** Transcript usage (cost per day) is read this often; the stats view also reads it when it opens. */
+const USAGE_SCAN_MS = 60_000;
 const EMIT_DEBOUNCE_MS = 50;
 const TRANSCRIPT_DEBOUNCE_MS = 100;
 const HOOK_ONLY_TTL_MS = 60_000;
@@ -93,10 +97,12 @@ export class SessionStore {
   private pollTimer: NodeJS.Timeout | null = null;
   private emitTimer: NodeJS.Timeout | null = null;
   private scanTimer: NodeJS.Timeout | null = null;
+  private usageTimer: NodeJS.Timeout | null = null;
 
   constructor(
     private readonly config: ConfigStore,
     private readonly daily: DailyStats,
+    private readonly usage: UsageLog,
     private readonly limitsCache: LimitsCache,
     private readonly reply: (id: string, decision: PermissionDecision, extras?: DecisionExtras) => boolean,
     private readonly listener: StoreListener,
@@ -109,11 +115,14 @@ export class SessionStore {
   start(): void {
     this.scanRegistry();
     this.pollTimer = setInterval(() => this.scanRegistry(), POLL_MS);
+    this.scanUsage();
+    this.usageTimer = setInterval(() => this.scanUsage(), USAGE_SCAN_MS);
   }
 
   stop(): void {
     this.dirWatcher?.close();
     if (this.pollTimer) clearInterval(this.pollTimer);
+    if (this.usageTimer) clearInterval(this.usageTimer);
     for (const tail of this.tails.values()) this.closeTail(tail);
     for (const timer of this.timeouts.values()) clearTimeout(timer);
     this.daily.flush();
@@ -399,10 +408,6 @@ export class SessionStore {
     const rec = this.recordFor(payload);
     if (rec) {
       applyStatusline(rec, payload);
-      const cost = rec.statusline?.costUsd;
-      if (cost !== null && cost !== undefined && rec.registry !== null) {
-        this.daily.recordCost(rec.sessionId, cost, rec.registry.startedAt, projectName(rec.cwd));
-      }
     }
     const limits = payload['rate_limits'] as Record<string, Record<string, unknown> | undefined> | undefined;
     const limit = (raw: Record<string, unknown> | undefined): RateLimit | null =>
@@ -558,11 +563,10 @@ export class SessionStore {
     return this.records.get(sessionId);
   }
 
-  /** Drops pins, order, renames and carried daily costs of sessions that no longer exist. */
+  /** Drops pins, order and renames of sessions that no longer exist. */
   pruneConfig(): void {
     const c = this.config.config;
     const live = new Set(this.records.keys());
-    this.daily.retain(live);
     const pins = c.pins.filter((id) => live.has(id));
     const order = c.order.filter((id) => live.has(id));
     const renames = Object.fromEntries(Object.entries(c.renames).filter(([id]) => live.has(id)));
@@ -646,10 +650,35 @@ export class SessionStore {
     return tiles.map((t) => ({ state: t.state, sinceMs: t.stateSince, project: t.project }));
   }
 
-  /** Per-day and per-project statistics of the last `days` days, today included. */
-  stats(days: number): StatsView {
+  private scanUsage(): void {
+    this.usage.scan().then(
+      (changed) => {
+        if (changed) this.changed();
+      },
+      (error: unknown) => log.warn(`usage scan failed: ${(error as Error).message}`),
+    );
+  }
+
+  /** Per-day and per-project statistics of the last `days` days, today included: activity plus transcript cost. */
+  async stats(days: number): Promise<StatsView> {
+    await this.usage.scan();
     const tiles = [...this.records.values()].filter((r) => this.isVisible(r)).map((r) => this.tileOf(r));
-    return this.daily.stats(days, this.ongoing(tiles));
+    const activity = this.daily.days(days, this.ongoing(tiles));
+    const result = activity.map((day) => {
+      const usage = this.usage.day(day.date);
+      const projects: Record<string, ProjectDay> = Object.create(null) as Record<string, ProjectDay>;
+      for (const name of new Set([...Object.keys(day.projects), ...Object.keys(usage)])) {
+        const a = day.projects[name] ?? { turns: 0, workingMs: 0, waitingMs: 0 };
+        projects[name] = { costUsd: projectCost(usage[name] ?? {}), ...a };
+      }
+      return { date: day.date, projects };
+    });
+    const first = [this.daily.firstDate(), this.usage.firstDate()].filter((d): d is string => d !== null).sort()[0];
+    return {
+      days: result,
+      models: this.usage.models(activity.map((d) => d.date)),
+      recordedSince: first ?? dateOf(Date.now()),
+    };
   }
 
   private header(tiles: TileView[]): HeaderView {
@@ -661,7 +690,10 @@ export class SessionStore {
       fiveHour: this.fiveHour,
       sevenDay: this.sevenDay,
       fiveHourEta: limitEta(this.fiveHourSamples, this.fiveHour?.resetsAt ? this.fiveHour.resetsAt * 1000 : null),
-      today: this.daily.view(this.ongoing(tiles)),
+      today: {
+        ...this.daily.view(this.ongoing(tiles)),
+        costUsd: Object.values(this.usage.day(dateOf(Date.now()))).reduce((sum, models) => sum + projectCost(models), 0),
+      },
     };
   }
 }

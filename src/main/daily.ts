@@ -1,27 +1,37 @@
-// Today's statistics, persisted in userData/today.json and reset at local midnight; finished days move to
-// userData/history.json (per project) for the stats view.
-// Statusline cost is cumulative per session, so each session keeps a baseline: 0 for sessions started today,
-// otherwise the total at the first sighting or at midnight.
+// Today's activity (sessions, prompts, working and waiting time), persisted in userData/today.json and reset at local
+// midnight; finished days move to userData/history.json (per project) for the stats view. Cost comes from the
+// transcripts instead (usage.ts).
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { DaySummary, ProjectDay, SessionState, StatsView, TodayView } from '../core/types';
+import type { SessionState } from '../core/types';
 import { log } from './log';
 
-interface CostEntry {
-  baseline: number;
-  latest: number;
-  project: string;
+/** Prompts and state time of one project on one day. */
+export interface Activity {
+  turns: number;
+  workingMs: number;
+  waitingMs: number;
+}
+
+export interface ActivityDay {
+  date: string;
+  projects: Record<string, Activity>;
+}
+
+export interface TodayActivity {
+  sessions: number;
+  turns: number;
+  workingMs: number;
+  waitingMs: number;
 }
 
 interface DailyFile {
   date: string;
-  costs: Record<string, CostEntry>;
   sessions: string[];
   turns: number;
   workingMs: number;
   waitingMs: number;
-  /** Prompts and state time per project; cost per project comes from `costs`. */
-  projects: Record<string, Omit<ProjectDay, 'costUsd'>>;
+  projects: Record<string, Activity>;
 }
 
 const SAVE_DEBOUNCE_MS = 1000;
@@ -30,7 +40,7 @@ const HISTORY_DAYS = 60;
 const WORKING = new Set<SessionState>(['working', 'compacting']);
 const WAITING = new Set<SessionState>(['needsApproval', 'needsInput']);
 
-function dateOf(ms: number): string {
+export function dateOf(ms: number): string {
   const d = new Date(ms);
   const pad = (n: number): string => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -43,10 +53,10 @@ function startOfDay(ms: number): number {
 }
 
 function empty(date: string): DailyFile {
-  return { date, costs: {}, sessions: [], turns: 0, workingMs: 0, waitingMs: 0, projects: dict() };
+  return { date, sessions: [], turns: 0, workingMs: 0, waitingMs: 0, projects: dict() };
 }
 
-function emptyProject(): Omit<ProjectDay, 'costUsd'> {
+function emptyActivity(): Activity {
   return { turns: 0, workingMs: 0, waitingMs: 0 };
 }
 
@@ -54,7 +64,7 @@ function emptyProject(): Omit<ProjectDay, 'costUsd'> {
  * Objects keyed by project folder name have no prototype: a folder named "__proto__" or "constructor" must be an
  * ordinary key, not an inherited property.
  */
-function dict<T>(entries: [string, T][] = []): Record<string, T> {
+export function dict<T>(entries: [string, T][] = []): Record<string, T> {
   const result = Object.create(null) as Record<string, T>;
   for (const [key, value] of entries) result[key] = value;
   return result;
@@ -63,30 +73,28 @@ function dict<T>(entries: [string, T][] = []): Record<string, T> {
 const num = (value: unknown): number => (typeof value === 'number' && Number.isFinite(value) ? value : 0);
 
 /** Project totals from a file, with every number checked: a hand-edited or damaged file must not produce NaN. */
-function projectsFrom<T extends Partial<ProjectDay>>(raw: unknown, withCost: boolean): Record<string, T> {
+function projectsFrom(raw: unknown): Record<string, Activity> {
   if (!raw || typeof raw !== 'object') return dict();
   return dict(
     Object.entries(raw as Record<string, unknown>).map(([name, value]) => {
       const p = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
-      const day = { turns: num(p['turns']), workingMs: num(p['workingMs']), waitingMs: num(p['waitingMs']) };
-      return [name, (withCost ? { costUsd: num(p['costUsd']), ...day } : day) as unknown as T];
+      return [name, { turns: num(p['turns']), workingMs: num(p['workingMs']), waitingMs: num(p['waitingMs']) }];
     }),
   );
 }
 
 /** Per-project totals of a day; `ongoing` adds the time of states that have not ended yet. */
-function summarise(d: DailyFile, ongoing: Ongoing[], now: number): DaySummary {
-  const projects = dict<ProjectDay>();
-  const get = (name: string): ProjectDay => (projects[name] ??= { costUsd: 0, ...emptyProject() });
+function summarise(d: DailyFile, ongoing: Ongoing[], now: number): ActivityDay {
+  const projects = dict<Activity>();
+  const get = (name: string): Activity => (projects[name] ??= emptyActivity());
   for (const [name, p] of Object.entries(d.projects)) Object.assign(get(name), p);
-  for (const entry of Object.values(d.costs)) get(entry.project).costUsd += Math.max(0, entry.latest - entry.baseline);
   for (const o of ongoing) {
     const ms = now - Math.max(o.sinceMs, startOfDay(now));
     if (WORKING.has(o.state)) get(o.project).workingMs += ms;
     else if (WAITING.has(o.state)) get(o.project).waitingMs += ms;
   }
   for (const [name, p] of Object.entries(projects)) {
-    if (p.costUsd === 0 && p.turns === 0 && p.workingMs === 0 && p.waitingMs === 0) delete projects[name];
+    if (p.turns === 0 && p.workingMs === 0 && p.waitingMs === 0) delete projects[name];
   }
   return { date: d.date, projects };
 }
@@ -101,7 +109,7 @@ export class DailyStats {
   private readonly path: string;
   private readonly historyPath: string;
   private data: DailyFile;
-  private history: DaySummary[];
+  private history: ActivityDay[];
   private timer: NodeJS.Timeout | null = null;
 
   constructor(
@@ -120,17 +128,14 @@ export class DailyStats {
     if (!existsSync(this.path)) return empty(dateOf(this.clock()));
     try {
       const raw = JSON.parse(readFileSync(this.path, 'utf8')) as Partial<DailyFile> | null;
-      if (raw && typeof raw.date === 'string' && raw.costs && Array.isArray(raw.sessions)) {
-        const costs: Record<string, CostEntry> = {};
-        for (const [id, e] of Object.entries(raw.costs)) costs[id] = { ...e, project: e.project ?? 'unknown' };
+      if (raw && typeof raw.date === 'string' && Array.isArray(raw.sessions)) {
         return {
           date: raw.date,
-          costs,
           sessions: raw.sessions,
           turns: Number(raw.turns) || 0,
           workingMs: Number(raw.workingMs) || 0,
           waitingMs: Number(raw.waitingMs) || 0,
-          projects: projectsFrom(raw.projects, false),
+          projects: projectsFrom(raw.projects),
         };
       }
     } catch {
@@ -140,14 +145,14 @@ export class DailyStats {
     return empty(dateOf(this.clock()));
   }
 
-  private loadHistory(): DaySummary[] {
+  private loadHistory(): ActivityDay[] {
     if (!existsSync(this.historyPath)) return [];
     try {
       const raw = JSON.parse(readFileSync(this.historyPath, 'utf8')) as { days?: unknown } | null;
       if (Array.isArray(raw?.days)) {
         return raw.days
-          .filter((d): d is DaySummary => !!d && typeof d.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d.date))
-          .map((d) => ({ date: d.date, projects: projectsFrom<ProjectDay>(d.projects, true) }));
+          .filter((d): d is ActivityDay => !!d && typeof d.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d.date))
+          .map((d) => ({ date: d.date, projects: projectsFrom(d.projects) }));
       }
     } catch {
       // fall through
@@ -160,17 +165,6 @@ export class DailyStats {
     const tmp = `${path}.tmp`;
     writeFileSync(tmp, JSON.stringify(value));
     renameSync(tmp, path);
-  }
-
-  /** Forgets carried cost baselines of sessions that no longer run. */
-  retain(liveSessionIds: Set<string>): void {
-    const before = Object.keys(this.data.costs).length;
-    for (const id of Object.keys(this.data.costs)) {
-      const entry = this.data.costs[id];
-      // Keep sessions that ran today (they count towards today's cost) and live ones.
-      if (!liveSessionIds.has(id) && entry && entry.latest === entry.baseline) delete this.data.costs[id];
-    }
-    if (Object.keys(this.data.costs).length !== before) this.save();
   }
 
   /** At the first call after midnight: archives the finished day and starts a new one. */
@@ -186,11 +180,7 @@ export class DailyStats {
     } catch (error) {
       log.warn(`history.json could not be written: ${(error as Error).message}`);
     }
-    const costs: Record<string, CostEntry> = {};
-    for (const [id, entry] of Object.entries(this.data.costs)) {
-      costs[id] = { baseline: entry.latest, latest: entry.latest, project: entry.project };
-    }
-    this.data = { ...empty(now), costs };
+    this.data = empty(now);
     this.save();
   }
 
@@ -213,21 +203,8 @@ export class DailyStats {
     this.writeAtomic(this.path, this.data);
   }
 
-  private project(name: string): Omit<ProjectDay, 'costUsd'> {
-    return (this.data.projects[name] ??= emptyProject());
-  }
-
-  recordCost(sessionId: string, totalUsd: number, sessionStartedAt: number, project: string): void {
-    this.rollOver();
-    const existing = this.data.costs[sessionId];
-    if (existing) {
-      existing.latest = totalUsd;
-      existing.project = project;
-    } else {
-      const baseline = sessionStartedAt >= startOfDay(this.clock()) ? 0 : totalUsd;
-      this.data.costs[sessionId] = { baseline, latest: totalUsd, project };
-    }
-    this.save();
+  private project(name: string): Activity {
+    return (this.data.projects[name] ??= emptyActivity());
   }
 
   sawSession(sessionId: string): void {
@@ -268,7 +245,7 @@ export class DailyStats {
       day = { date, projects: dict() };
       this.history = [...this.history, day].sort((a, b) => a.date.localeCompare(b.date)).slice(-HISTORY_DAYS);
     }
-    const p = (day.projects[project] ??= { costUsd: 0, ...emptyProject() });
+    const p = (day.projects[project] ??= emptyActivity());
     p[key] += ms;
     try {
       this.writeAtomic(this.historyPath, { days: this.history });
@@ -278,7 +255,7 @@ export class DailyStats {
   }
 
   /** Today's totals plus the time of states that are still running (not yet ended by a transition). */
-  view(ongoing: Ongoing[] = []): TodayView {
+  view(ongoing: Ongoing[] = []): TodayActivity {
     this.rollOver();
     const d = this.data;
     const now = this.clock();
@@ -289,17 +266,16 @@ export class DailyStats {
       turns: d.turns,
       workingMs: d.workingMs + running(WORKING),
       waitingMs: d.waitingMs + running(WAITING),
-      costUsd: Object.values(d.costs).reduce((sum, e) => sum + Math.max(0, e.latest - e.baseline), 0),
     };
   }
 
   /** The last `days` days, oldest first, one entry per calendar day (empty days included); today is live. */
-  stats(days: number, ongoing: Ongoing[] = []): StatsView {
+  days(days: number, ongoing: Ongoing[] = []): ActivityDay[] {
     this.rollOver();
     const now = this.clock();
     const byDate = new Map(this.history.map((d) => [d.date, d]));
     byDate.set(this.data.date, summarise(this.data, ongoing, now));
-    const result: DaySummary[] = [];
+    const result: ActivityDay[] = [];
     const cursor = new Date(startOfDay(now));
     cursor.setDate(cursor.getDate() - (days - 1));
     for (let i = 0; i < days; i++) {
@@ -307,7 +283,11 @@ export class DailyStats {
       result.push(byDate.get(date) ?? { date, projects: {} });
       cursor.setDate(cursor.getDate() + 1);
     }
-    const first = this.history[0]?.date ?? this.data.date;
-    return { days: result, recordedSince: first };
+    return result;
+  }
+
+  /** First day with recorded activity (YYYY-MM-DD). */
+  firstDate(): string {
+    return this.history[0]?.date ?? this.data.date;
   }
 }

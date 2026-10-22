@@ -24,6 +24,8 @@ import type {
 } from '../core/types';
 import { ConfigStore, normaliseSettings } from './config';
 import { DailyStats } from './daily';
+import { UsageLog } from './usage';
+import { usageCsv } from '../core/usage';
 import { LimitsCache } from './limits';
 import { probeLimits } from './limitProbe';
 import { runDoctor } from './doctor';
@@ -69,6 +71,7 @@ async function start(): Promise<void> {
   registerAppIdentity(APP_ID, APP_NAME, icons.png);
 
   const daily = new DailyStats(userData);
+  const usage = new UsageLog(userData);
   const integration = new Integration(userData, join(app.getAppPath(), 'out', 'hook', 'agenttiles-hook.js'));
   const settings = (): Settings => config.config.settings;
   let quitting = false;
@@ -102,7 +105,7 @@ async function start(): Promise<void> {
 
   // The store needs the IPC server to answer permission holds; the server needs the store for its handlers.
   let ipc: IpcServer | null = null;
-  const store = new SessionStore(config, daily, new LimitsCache(userData), (id, decision, extras) => ipc?.reply(id, decision, extras) ?? false, {
+  const store = new SessionStore(config, daily, usage, new LimitsCache(userData), (id, decision, extras) => ipc?.reply(id, decision, extras) ?? false, {
     snapshot: (next) => {
       snapshot = next;
       if (!win.isDestroyed()) win.webContents.send('snapshot', next);
@@ -328,6 +331,17 @@ async function start(): Promise<void> {
     return result.canceled ? null : (result.filePaths[0] ?? null);
   });
   ipcMain.handle('stats:get', (_e, days: number) => store.stats(days === 30 ? 30 : 7));
+  ipcMain.handle('stats:export', async () => {
+    await usage.scan();
+    const result = await dialog.showSaveDialog(win, {
+      title: 'Export usage',
+      defaultPath: join(app.getPath('documents'), 'agenttiles-usage.csv'),
+      filters: [{ name: 'CSV', extensions: ['csv'] }],
+    });
+    if (result.canceled || !result.filePath) return null;
+    writeFileSync(result.filePath, usageCsv(usage.allDays()));
+    return result.filePath;
+  });
   ipcMain.handle('window:toggleFullscreen', () => win.setFullScreen(!win.isFullScreen()));
   ipcMain.handle('window:isFullscreen', () => win.isFullScreen());
   win.on('enter-full-screen', () => win.webContents.send('fullscreen', true));

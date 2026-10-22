@@ -14,6 +14,16 @@ export function since(fromMs: number, nowMs: number): string {
 export const COST_HINT =
   'Token usage priced at API list prices, as reported by the Claude Code statusline. Not billed on a Claude subscription.';
 
+export const USAGE_COST_HINT =
+  'Token usage from the session transcripts, priced at API list prices. Not billed on a Claude subscription.';
+
+/** Token count as "950", "12.3k", "4.1M". */
+export function tokenCount(value: number): string {
+  if (value < 1000) return String(value);
+  if (value < 1_000_000) return `${(value / 1000).toFixed(value < 10_000 ? 1 : 0)}k`;
+  return `${(value / 1_000_000).toFixed(value < 10_000_000 ? 1 : 0)}M`;
+}
+
 export function usd(value: number): string {
   return value < 10 ? `$${value.toFixed(2)}` : `$${value.toFixed(1)}`;
 }
