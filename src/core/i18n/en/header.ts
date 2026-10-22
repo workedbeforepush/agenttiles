@@ -22,12 +22,6 @@ export const header = {
     eta: 'limit ~{time}',
   },
   today: 'API-equiv. today',
-  update: {
-    failed: 'Update failed',
-    failedHint: 'The last update did not work: click for details',
-    available: 'Update {version}',
-    availableHint: 'AgentTiles {current} → {available}',
-  },
   newSession: 'New session',
   newSessionHint: 'New session or resume',
   group: 'Group by project',

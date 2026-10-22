@@ -91,7 +91,7 @@ function registerIpc(): void {
   ipcMain.handle('stats:get', (_e, days: number) => stats(Date.now(), days === 30 ? 30 : 7));
   ipcMain.handle('sessions:recent', () => launchView(Date.now()));
   ipcMain.handle('doctor:run', () => null);
-  ipcMain.handle('update:get', () => ({ current: '0.1.0', available: null, command: '', canInstall: false, failed: null }));
+  ipcMain.handle('update:get', () => ({ current: '0.1.0', available: null, command: '', canInstall: false, failed: null, dismissed: false }));
   ipcMain.handle('update:run', () => null);
 }
 

@@ -297,6 +297,8 @@ export interface UpdateView {
   canInstall: boolean;
   /** The end of npm's output (or a note that npm wrote none) when the last update from the app failed. */
   failed: string | null;
+  /** The user closed the update card for this available version. */
+  dismissed: boolean;
 }
 
 export interface SettingsView {

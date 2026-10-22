@@ -31,6 +31,8 @@ export interface Config {
   tourDone: boolean;
   /** The newest version an update toast announced: each version gets one toast, also across restarts. */
   updateAnnounced: string | null;
+  /** The version whose update card the user closed; a newer version shows the card again. */
+  updateDismissed: string | null;
   pins: string[];
   /** Manual tile order (drag and drop), session ids. */
   order: string[];
@@ -170,6 +172,7 @@ export class ConfigStore {
         hookPromptOff: false,
         tourDone: false,
         updateAnnounced: null,
+        updateDismissed: null,
         pins: [],
         order: [],
         hiddenProjects: [],
@@ -191,6 +194,7 @@ export class ConfigStore {
       hookPromptOff: state['hookPromptOff'] === true,
       tourDone: state['tourDone'] === true,
       updateAnnounced: typeof state['updateAnnounced'] === 'string' ? state['updateAnnounced'] : null,
+      updateDismissed: typeof state['updateDismissed'] === 'string' ? state['updateDismissed'] : null,
       pins: stringList(state['pins']),
       order: stringList(state['order']),
       hiddenProjects: stringList(state['hiddenProjects']),
@@ -210,6 +214,7 @@ export class ConfigStore {
         tourDone: c.tourDone,
         // TOML has no null: no announced version is no key.
         ...(c.updateAnnounced !== null ? { updateAnnounced: c.updateAnnounced } : {}),
+        ...(c.updateDismissed !== null ? { updateDismissed: c.updateDismissed } : {}),
         pins: c.pins,
         order: c.order,
         hiddenProjects: c.hiddenProjects,

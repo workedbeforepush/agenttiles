@@ -158,7 +158,8 @@ export class Updater {
     }
   }
 
-  view(t: Translate = mainT): UpdateView {
+  /** The update state without the card's dismissal, which lives in the config. */
+  view(t: Translate = mainT): Omit<UpdateView, 'dismissed'> {
     const available = this.latest !== null && compareVersions(this.latest, this.current) > 0 ? this.latest : null;
     return {
       current: this.current,

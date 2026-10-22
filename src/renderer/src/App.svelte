@@ -11,6 +11,7 @@
   import ReviewDialog from './components/ReviewDialog.svelte';
   import NewSession from './components/NewSession.svelte';
   import Tour from './components/Tour.svelte';
+  import UpdateCard from './components/UpdateCard.svelte';
   import WithCode from './components/WithCode.svelte';
   import { setLocale, t } from './i18n.svelte';
   import { snapshot as demoSnapshot } from '../../core/demo';
@@ -374,8 +375,6 @@
     {grouped}
     onGroup={() => void window.agenttiles.updateSettings({ groupByProject: !grouped }).then((v) => (settingsView = v))}
     onNewSession={() => (showNewSession = true)}
-    {update}
-    onUpdate={() => void window.agenttiles.runUpdate()}
     onViewMode={(mode) => void setViewMode(mode)}
     onFullscreen={() => void window.agenttiles.toggleFullscreen()}
     onRefreshLimits={() => void refreshLimits()}
@@ -468,6 +467,10 @@
     onDoctor={() => (showDoctor = true)}
     onTour={startTour}
   />
+{/if}
+
+{#if update && !touring}
+  <UpdateCard {update} />
 {/if}
 
 {#if touring}

@@ -35,6 +35,8 @@ const api: AgentTilesApi = {
     ipcRenderer.on('update', (_event, update) => listener(update));
   },
   runUpdate: () => ipcRenderer.invoke('update:run'),
+  openReleaseNotes: () => ipcRenderer.invoke('update:notes'),
+  dismissUpdate: () => ipcRenderer.invoke('update:dismiss'),
   recentSessions: () => ipcRenderer.invoke('sessions:recent'),
   launchSession: (cwd, sessionId, worktree) => ipcRenderer.invoke('sessions:launch', cwd, sessionId, worktree),
   pickFolder: () => ipcRenderer.invoke('dialog:folder'),

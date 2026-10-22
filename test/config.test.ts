@@ -19,7 +19,7 @@ describe('settings normalisation', () => {
 });
 
 describe('config store', () => {
-  it('remembers the version an update toast announced across restarts', () => {
+  it('remembers the announced and the dismissed update version across restarts', () => {
     const dir = mkdtempSync(join(tmpdir(), 'agenttiles-config-'));
     try {
       const store = new ConfigStore(dir);
@@ -27,8 +27,10 @@ describe('config store', () => {
       store.save();
       expect(new ConfigStore(dir).config.updateAnnounced).toBeNull();
       store.config.updateAnnounced = '0.3.0';
+      store.config.updateDismissed = '0.3.0';
       store.save();
       expect(new ConfigStore(dir).config.updateAnnounced).toBe('0.3.0');
+      expect(new ConfigStore(dir).config.updateDismissed).toBe('0.3.0');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

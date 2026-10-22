@@ -22,6 +22,7 @@ import type {
   SettingsView,
   Snapshot,
   TileAction,
+  UpdateView,
 } from '../core/types';
 import { ConfigStore, normaliseSettings } from './config';
 import { DailyStats } from './daily';
@@ -486,9 +487,16 @@ async function start(): Promise<void> {
   ipcMain.handle('limits:refresh', () => probe());
 
   const updater = new Updater(userData, app.getAppPath(), app.getVersion());
-  const updateChecked = (): void => {
+  const updateView = (): UpdateView => {
     const view = updater.view();
-    if (!win.isDestroyed()) win.webContents.send('update', view);
+    return { ...view, dismissed: view.available !== null && view.available === config.config.updateDismissed };
+  };
+  const sendUpdate = (): void => {
+    if (!win.isDestroyed()) win.webContents.send('update', updateView());
+  };
+  const updateChecked = (): void => {
+    const view = updateView();
+    sendUpdate();
     tray.setUpdate(view.available);
     const version = view.available;
     if (!version || !shouldAnnounce(version, config.config.updateAnnounced)) return;
@@ -549,8 +557,17 @@ async function start(): Promise<void> {
     if (response === 0) clipboard.writeText(view.command);
     else if (response === 1 && view.available) await openReleaseNotes(view.available);
   }
-  ipcMain.handle('update:get', () => updater.view());
+  ipcMain.handle('update:get', () => updateView());
   ipcMain.handle('update:run', () => runUpdate());
+  ipcMain.handle('update:notes', async () => {
+    const version = updater.view().available;
+    if (version) await openReleaseNotes(version);
+  });
+  ipcMain.handle('update:dismiss', () => {
+    config.config.updateDismissed = updater.view().available;
+    config.save();
+    sendUpdate();
+  });
 
   // Every renderer handler is registered above: the window is already loading and calls them on mount.
   try {
