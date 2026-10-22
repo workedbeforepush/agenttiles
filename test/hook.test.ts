@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { build } from 'esbuild';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { LineSplitter, encode, type HookMessage } from '../src/core/protocol';
+import { LineSplitter, encode, parseHello, proofOf, type HookMessage } from '../src/core/protocol';
 
 const dir = mkdtempSync(join(tmpdir(), 'agenttiles-test-'));
 const hookPath = join(dir, 'agenttiles-hook.js');
@@ -36,6 +36,8 @@ async function waitFor(predicate: () => boolean): Promise<void> {
 let server: Server;
 const received: HookMessage[] = [];
 let onMessage: (message: HookMessage, socket: Socket) => void = () => undefined;
+/** The token the fake app proves; a different one plays a squatter on a stale endpoint. */
+let provenToken = 'test-token';
 
 beforeAll(async () => {
   await build({
@@ -49,8 +51,15 @@ beforeAll(async () => {
   server = createServer((socket) => {
     const splitter = new LineSplitter();
     socket.setEncoding('utf8');
+    let greeted = false;
     socket.on('data', (chunk: string) => {
       for (const line of splitter.push(chunk) ?? []) {
+        if (!greeted) {
+          greeted = true;
+          const nonce = parseHello(line);
+          if (nonce) socket.write(encode({ proof: proofOf(provenToken, nonce) }));
+          continue;
+        }
         const message = JSON.parse(line) as HookMessage;
         received.push(message);
         onMessage(message, socket);
@@ -78,6 +87,35 @@ describe('agenttiles-hook', () => {
     const message = received.at(-1);
     expect(message).toMatchObject({ kind: 'event', token: 'test-token', payload: input });
     expect(message?.ts).toBeGreaterThanOrEqual(started - 1000);
+  });
+
+  it('leaves out tool_response and cuts oversized events to fit one line', async () => {
+    const input = {
+      session_id: 's1',
+      hook_event_name: 'PostToolUse',
+      tool_name: 'Write',
+      tool_input: { file_path: '/x/big.txt', content: 'a'.repeat(2 * 1024 * 1024) },
+      tool_response: { ok: true },
+    };
+    const before = received.length;
+    expect(await runHook('hook', input)).toEqual({ code: 0, stdout: '' });
+    await waitFor(() => received.length > before);
+    const payload = received.at(-1)?.payload as { tool_input: { file_path: string; content: string }; tool_response?: unknown };
+    expect(payload.tool_response).toBeUndefined();
+    expect(payload.tool_input.file_path).toBe('/x/big.txt');
+    expect(payload.tool_input.content.length).toBeLessThan(64 * 1024);
+  });
+
+  it('sends nothing to an endpoint that cannot prove the token, and passes permissions back', async () => {
+    provenToken = 'squatter-without-the-token';
+    const before = received.length;
+    const event = await runHook('hook', { session_id: 's1', hook_event_name: 'Stop' });
+    const permission = await runHook('hook', { session_id: 's1', hook_event_name: 'PermissionRequest', tool_name: 'Bash' });
+    provenToken = 'test-token';
+    await new Promise((r) => setTimeout(r, 100));
+    expect(event).toEqual({ code: 0, stdout: '' });
+    expect(permission).toEqual({ code: 0, stdout: '{}' });
+    expect(received.length).toBe(before);
   });
 
   it('waits for a permission decision and prints it', async () => {

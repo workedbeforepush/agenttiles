@@ -95,8 +95,18 @@ export async function recentSessions(running: Set<string>): Promise<LaunchView> 
   return { projects: [...projects.values()].slice(0, MAX_PROJECTS), sessions };
 }
 
-/** A worktree name Claude Code can turn into a folder and branch: no spaces, no leading dash or dot. */
+/** Worktree name characters: no spaces, no leading dash or dot. */
 const WORKTREE_NAME = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,99}$/;
+
+/**
+ * A worktree name Claude Code can turn into a folder and branch: the characters above and git's ref name rules that
+ * they still allow (no "..", no empty component, no component starting with a dot or ending in ".lock", no trailing
+ * dot).
+ */
+function isWorktreeName(name: string): boolean {
+  if (!WORKTREE_NAME.test(name) || name.includes('..') || name.endsWith('.')) return false;
+  return name.split('/').every((part) => part !== '' && !part.startsWith('.') && !part.endsWith('.lock'));
+}
 
 /**
  * The claude command line: resume `sessionId`, or start fresh; `worktree` (a name, or '' for one Claude picks) starts
@@ -104,7 +114,7 @@ const WORKTREE_NAME = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,99}$/;
  */
 export function launchCommand(sessionId: string | null, worktree: string | null): string[] {
   if (sessionId !== null && !SESSION_ID.test(sessionId)) throw new Error(t('main.launch.invalidSessionId'));
-  if (worktree !== null && worktree !== '' && !WORKTREE_NAME.test(worktree)) {
+  if (worktree !== null && worktree !== '' && !isWorktreeName(worktree)) {
     throw new Error(t('main.launch.invalidWorktree', { name: worktree }));
   }
   if (sessionId !== null) return ['claude', '--resume', sessionId];

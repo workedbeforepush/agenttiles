@@ -47,9 +47,16 @@ export interface InstallOptions {
   permissionTimeoutSec: number;
 }
 
+/** The script as a whole path element ('.../agenttiles-hook.js'), not any text that merely contains the name. */
+const OUR_SCRIPT = /(^|[\\/"'\s])agenttiles-hook\.js(?=$|["'\s])/;
+
+function namesOurScript(text: string): boolean {
+  return OUR_SCRIPT.test(text);
+}
+
 function isOurs(handler: HookHandler): boolean {
   const parts = [handler.command ?? '', ...(Array.isArray(handler.args) ? handler.args : [])];
-  return parts.some((part) => typeof part === 'string' && part.includes(HOOK_SCRIPT_NAME));
+  return parts.some((part) => typeof part === 'string' && namesOurScript(part));
 }
 
 function hooksObject(settings: ClaudeSettings): Record<string, HookGroup[]> {
@@ -161,7 +168,8 @@ export function currentStatusline(settings: ClaudeSettings): StatusLineConfig | 
 }
 
 export function statuslineInstalled(settings: ClaudeSettings): boolean {
-  return currentStatusline(settings)?.command.includes(HOOK_SCRIPT_NAME) ?? false;
+  const command = currentStatusline(settings)?.command;
+  return command !== undefined && namesOurScript(command);
 }
 
 /** Installs the wrapper. Returns the foreign statusline that was replaced, if any, so it can be chained. */
@@ -171,7 +179,7 @@ export function installStatusline(
   hookPath: string,
 ): { settings: ClaudeSettings; previous: StatusLineConfig | null } {
   const existing = currentStatusline(settings);
-  const previous = existing && !existing.command.includes(HOOK_SCRIPT_NAME) ? existing : null;
+  const previous = existing && !namesOurScript(existing.command) ? existing : null;
   const base = previous ?? existing;
   const next: StatusLineConfig = { ...(base ?? {}), type: 'command', command: statuslineCommand(nodePath, hookPath) };
   return { settings: { ...settings, statusLine: next }, previous };

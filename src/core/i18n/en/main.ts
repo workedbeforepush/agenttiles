@@ -15,6 +15,7 @@ export const main = {
     cancel: 'Cancel',
     failed: 'claude stop {jobId} failed: {error}',
   },
+  startupFailed: 'AgentTiles could not start',
   hotkeyUnavailable: 'Hotkey {hotkey} is not available.',
   invalidRequest: 'Invalid request.',
   exportDialog: {
@@ -29,6 +30,7 @@ export const main = {
     updateAndRestart: 'Update and restart',
     later: 'Later',
     failed: 'The last update did not work.',
+    notStarted: 'The update could not start.',
     available: 'AgentTiles {version} is available.',
     failedDetail: 'npm said:\n{output}\n\nUpdate in a terminal with:\n{command}',
     manualDetail: 'Update in a terminal with:\n{command}',

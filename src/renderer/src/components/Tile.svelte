@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import type { TileAction, TileView } from '../../../core/types';
   import { markdownHtml } from '../markdown';
   import DiffLines from './DiffLines.svelte';
@@ -53,6 +54,8 @@
   }
 
   function commitRename(): void {
+    // The input blurs as it goes away after Enter or Escape; that blur must neither save twice nor undo a cancel.
+    if (!renaming) return;
     renaming = false;
     const value = renameValue.trim();
     if (value === tile.name) return;
@@ -61,13 +64,16 @@
 
   function onRenameKey(event: KeyboardEvent): void {
     event.stopPropagation();
+    // While an IME composes, Enter and Escape belong to the composition.
+    if (event.isComposing) return;
     if (event.key === 'Enter') commitRename();
     if (event.key === 'Escape') renaming = false;
   }
 
-  function decide(event: MouseEvent, decision: 'allow' | 'deny', always = false): void {
+  /** Answers the request with the id the buttons were rendered for, never one that replaced it since. */
+  function decide(event: MouseEvent, id: string, decision: 'allow' | 'deny', always = false): void {
     event.stopPropagation();
-    if (tile.pending) void window.agenttiles.decidePermission(tile.pending.id, { decision, always });
+    void window.agenttiles.decidePermission(id, { decision, always });
   }
 
   function review(event: Event): void {
@@ -89,6 +95,13 @@
     if (hoverTimer) clearTimeout(hoverTimer);
     hover = false;
   }
+
+  // A tile can go away under the mouse (session ended); its hover timer must not fire after that.
+  onMount(() => {
+    return () => {
+      if (hoverTimer) clearTimeout(hoverTimer);
+    };
+  });
 
   function focusTile(): void {
     if (!renaming) act('focus');
@@ -284,12 +297,12 @@
       {/if}
     {/if}
     <div class="actions">
-      <button class="allow" onclick={(e) => decide(e, 'allow')} title={prettyInput(pending.toolInput)}>{t('tile.allow')}</button>
+      <button class="allow" onclick={(e) => decide(e, pending.id, 'allow')} title={prettyInput(pending.toolInput)}>{t('tile.allow')}</button>
       {#if pending.alwaysLabel}
-        <button class="always" onclick={(e) => decide(e, 'allow', true)} title={pending.alwaysLabel}>{t('tile.always')}</button>
+        <button class="always" onclick={(e) => decide(e, pending.id, 'allow', true)} title={pending.alwaysLabel}>{t('tile.always')}</button>
       {/if}
       {#if pending.diff}<button class="review" onclick={review} title={t('tile.diffHint')}>{t('tile.diff')}</button>{/if}
-      <button class="deny" onclick={(e) => decide(e, 'deny')} title={t('tile.denyHint')}>{t('tile.deny')}</button>
+      <button class="deny" onclick={(e) => decide(e, pending.id, 'deny')} title={t('tile.denyHint')}>{t('tile.deny')}</button>
     </div>
   {/if}
 
@@ -327,7 +340,7 @@
           <div class="label">{q.header || t('tile.details.question')}</div>
           <p>{q.question}</p>
           <ul class="tasks">
-            {#each q.options as option (option.label)}
+            {#each q.options as option, j (j)}
               <li><b>{option.label}</b>{option.description ? ` – ${option.description}` : ''}</li>
             {/each}
           </ul>

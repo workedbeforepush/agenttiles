@@ -107,6 +107,19 @@ function s(input: HookInput, key: string): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null;
 }
 
+/**
+ * The start of a streamed message, as much as a preview of `max` characters needs: joining every part of a long reply
+ * on each delta would be quadratic. Parts may arrive out of order, so `parts` can have holes.
+ */
+function messageStart(parts: (string | undefined)[], max: number): string {
+  let text = '';
+  for (const part of parts) {
+    text += part ?? '';
+    if (text.trimStart().length > max) break;
+  }
+  return text;
+}
+
 export function toolKey(toolName: string, toolInput: unknown): string {
   return `${toolName}|${JSON.stringify(toolInput ?? null)}`;
 }
@@ -294,7 +307,7 @@ export function applyHookEvent(rec: SessionRecord, input: HookInput, now: number
       if (rec.message === null || rec.message.id !== id) rec.message = { id, parts: [] };
       if (index !== null && index >= 0 && index < 10_000) rec.message.parts[index] = delta;
       else rec.message.parts.push(delta);
-      rec.hookAssistant = clipText(rec.message.parts.join(''), 400);
+      rec.hookAssistant = clipText(messageStart(rec.message.parts, 400), 400);
       break;
     }
     case 'ConfigChange':

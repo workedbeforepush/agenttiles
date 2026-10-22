@@ -73,6 +73,7 @@ export class Notifier {
     const settings = this.settings();
     if (!settings.toasts || this.windowFocused() || !Notification.isSupported()) return;
     const now = Date.now();
+    for (const [sessionId, at] of this.last) if (now - at >= PER_SESSION_GAP_MS) this.last.delete(sessionId);
     for (const { tile, state } of transitions) {
       if (!TOAST_STATES.has(state)) continue;
       if (now - (this.last.get(tile.sessionId) ?? 0) < PER_SESSION_GAP_MS) continue;

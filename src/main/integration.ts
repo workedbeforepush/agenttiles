@@ -8,9 +8,11 @@ import {
   realpathSync,
   renameSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 import type { IntegrationStatus } from '../core/types';
 import { userSettingsPath } from '../core/paths';
 import {
@@ -31,11 +33,14 @@ import { log } from './log';
 import { t } from './i18n';
 import type { MessageKey } from '../core/i18n';
 
+type Part = 'hooks' | 'statusline';
+
 export class Integration {
   readonly hookPath: string;
   private readonly chainPath: string;
   private nodePath: string | null = null;
-  private lastError: string | null = null;
+  /** The last failure per part: a later success of the other part must not hide it. */
+  private readonly errors = new Map<Part, string>();
 
   constructor(
     private readonly userDataDir: string,
@@ -77,14 +82,18 @@ export class Integration {
 
   /**
    * Read, change and write in one synchronous step to keep the window for concurrent writes by Claude Code as
-   * small as possible; the write is atomic (tmp + rename next to the real file).
+   * small as possible; the write is atomic (tmp + rename next to the real file) and keeps the file's permissions.
+   * Nothing is written when nothing changes.
    */
   private updateSettings(change: (settings: ClaudeSettings) => ClaudeSettings): void {
-    const next = change(this.readSettings());
+    const current = this.readSettings();
+    const next = change(current);
+    if (isDeepStrictEqual(next, current)) return;
     const target = this.settingsTarget();
     mkdirSync(dirname(target), { recursive: true });
     const tmp = `${target}.agenttiles.tmp`;
-    writeFileSync(tmp, `${JSON.stringify(next, null, 2)}\n`);
+    const mode = existsSync(target) ? statSync(target).mode & 0o777 : 0o600;
+    writeFileSync(tmp, `${JSON.stringify(next, null, 2)}\n`, { mode });
     renameSync(tmp, target);
   }
 
@@ -108,7 +117,7 @@ export class Integration {
           nodePath !== null && hooksInstalled(settings, { nodePath, hookPath: this.hookPath, permissionTimeoutSec }),
         statuslineInstalled: currentStatusline(settings)?.command === expectedStatusline,
         nodePath,
-        error: this.lastError,
+        error: this.errors.size > 0 ? [...this.errors.values()].join('\n') : null,
       };
     } catch (error) {
       return { hooksInstalled: false, statuslineInstalled: false, nodePath: null, error: (error as Error).message };
@@ -116,20 +125,20 @@ export class Integration {
   }
 
   /** `action` names the step in the log, `failed` is the message the user sees when it fails. */
-  private run(action: string, failed: MessageKey, fn: () => void): void {
+  private run(part: Part, action: string, failed: MessageKey, fn: () => void): void {
     try {
       fn();
-      this.lastError = null;
+      this.errors.delete(part);
       log.info(`integration: ${action}`);
     } catch (error) {
-      this.lastError = t(failed, { error: (error as Error).message });
+      this.errors.set(part, t(failed, { error: (error as Error).message }));
       log.error(`integration: ${action} failed`, error);
     }
   }
 
   setHooks(enabled: boolean, permissionTimeoutSec: number): void {
     const failed = enabled ? 'main.integration.installHooksFailed' : 'main.integration.uninstallHooksFailed';
-    this.run(enabled ? 'install hooks' : 'uninstall hooks', failed, () => {
+    this.run('hooks', enabled ? 'install hooks' : 'uninstall hooks', failed, () => {
       if (!enabled) {
         this.updateSettings(uninstallHooks);
         return;
@@ -142,7 +151,7 @@ export class Integration {
 
   setStatusline(enabled: boolean): void {
     const failed = enabled ? 'main.integration.installStatuslineFailed' : 'main.integration.uninstallStatuslineFailed';
-    this.run(enabled ? 'install statusline' : 'uninstall statusline', failed, () => {
+    this.run('statusline', enabled ? 'install statusline' : 'uninstall statusline', failed, () => {
       if (!enabled) {
         const previous = existsSync(this.chainPath)
           ? (JSON.parse(readFileSync(this.chainPath, 'utf8')) as StatusLineConfig)

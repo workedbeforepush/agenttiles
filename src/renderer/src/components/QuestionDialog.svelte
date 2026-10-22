@@ -85,7 +85,12 @@
   }
 
   function onKey(event: KeyboardEvent): void {
+    // While an IME composes, Enter and Escape belong to the composition, not to the dialog.
+    if (event.isComposing) return;
     const typing = event.target === otherInput;
+    // A focused Back, Next, tab or close button keeps Enter and Space, so the browser activates that button.
+    const control = event.target instanceof HTMLButtonElement && !event.target.classList.contains('option');
+    if (control && (event.key === 'Enter' || event.key === ' ')) return;
     if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
@@ -147,7 +152,7 @@
       <h3>{q.question}</h3>
       {#if q.multiSelect}<p class="hint">{t('dialogs.question.selectAll')}</p>{/if}
       <div class="options" role={q.multiSelect ? 'group' : 'radiogroup'}>
-        {#each q.options as option, row (option.label)}
+        {#each q.options as option, row (row)}
           <button
             class="option"
             class:checked={isChecked(row)}

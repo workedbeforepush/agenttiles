@@ -53,6 +53,19 @@ describe('hooks', () => {
     expect(anyHooksInstalled(removed)).toBe(false);
     expect(uninstallHooks(installHooks({}, options))).toEqual({});
   });
+
+  it('keeps foreign hooks that merely mention the script name', () => {
+    const mentions = {
+      hooks: {
+        Stop: [
+          { hooks: [{ type: 'command', command: 'cp agenttiles-hook.js.bak /tmp' }] },
+          { hooks: [{ type: 'command', command: 'node', args: ['/x/my-agenttiles-hook.js'] }] },
+        ],
+      },
+    };
+    expect(anyHooksInstalled(mentions)).toBe(false);
+    expect(uninstallHooks(mentions)).toEqual(mentions);
+  });
 });
 
 describe('statusline', () => {

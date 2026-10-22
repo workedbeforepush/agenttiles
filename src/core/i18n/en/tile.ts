@@ -64,6 +64,6 @@ export const tile = {
     stopBackground: 'Stop background session…',
   },
   diffLines: {
-    more: { one: '{count} more lines', other: '{count} more lines' },
+    more: { one: '{count} more line', other: '{count} more lines' },
   },
 };

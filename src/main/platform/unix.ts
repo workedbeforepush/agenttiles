@@ -1,6 +1,6 @@
 // Shared helpers for macOS and Linux: the process table via `ps`, and the PATH of the user's login shell.
-import { execFile } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { execFile, execFileSync } from 'node:child_process';
+import { statSync } from 'node:fs';
 import { delimiter, join } from 'node:path';
 
 export interface UnixProcess {
@@ -59,12 +59,45 @@ export async function ttyOf(pid: number): Promise<string | null> {
   return tty.startsWith('/dev/') ? tty : `/dev/${tty}`;
 }
 
-/** True when `name` is an executable on PATH. */
+/** Parses `ps -o lstart= -p <pid>`, e.g. "Wed Oct 22 08:03:12 2026"; null when ps printed nothing. */
+export function parseLstart(output: string): string | null {
+  const start = output.trim();
+  return start.length > 0 ? start : null;
+}
+
+/**
+ * Start time of a running process in the format of procStart in the registry, or null when the process does not
+ * exist. Claude Code takes procStart from `ps -o lstart=` in the C locale and UTC, so this runs the same command.
+ */
+export function processStartTime(pid: number): string | null {
+  try {
+    const output = execFileSync('ps', ['-o', 'lstart=', '-p', String(pid)], {
+      encoding: 'utf8',
+      timeout: 2000,
+      stdio: ['ignore', 'pipe', 'ignore'],
+      env: { ...process.env, LC_ALL: 'C', TZ: 'UTC' },
+    });
+    return parseLstart(output);
+  } catch {
+    // ps exits 1 for a pid that does not exist.
+    return null;
+  }
+}
+
+/** True when `name` is a file on PATH; a directory of that name (e.g. a checkout called "kitty") does not count. */
 export function onPath(name: string): boolean {
-  return (process.env['PATH'] ?? '').split(delimiter).some((dir) => dir && existsSync(join(dir, name)));
+  return (process.env['PATH'] ?? '')
+    .split(delimiter)
+    .some((dir) => dir && statSync(join(dir, name), { throwIfNoEntry: false })?.isFile() === true);
 }
 
 const MARK = '__AGENTTILES_PATH__';
+
+/**
+ * Prints PATH between markers in every login shell people use: `${PATH}` is a syntax error in fish, and fish joins
+ * a quoted "$PATH" list with spaces in older versions. `printenv` prints the exported value, colon-separated.
+ */
+export const SHELL_PATH_COMMAND = `echo ${MARK}; printenv PATH; echo ${MARK}`;
 
 /** The PATH printed between markers by a login shell; null when the output has none (shell startup noise is ignored). */
 export function parseShellPath(output: string): string | null {
@@ -89,8 +122,7 @@ export function mergePath(current: string, shell: string): string {
 export async function adoptLoginShellPath(): Promise<void> {
   const shell = process.env['SHELL'] ?? '/bin/sh';
   try {
-    // ${PATH} with braces: "$PATH__X" would be read as a variable named PATH__X.
-    const output = await run(shell, ['-ilc', `printf '%s' "${MARK}\${PATH}${MARK}"`], 10_000);
+    const output = await run(shell, ['-ilc', SHELL_PATH_COMMAND], 10_000);
     const path = parseShellPath(output);
     if (path) process.env['PATH'] = mergePath(process.env['PATH'] ?? '', path);
   } catch {

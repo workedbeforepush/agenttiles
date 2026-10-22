@@ -84,6 +84,26 @@ describe('Integration', () => {
     expect(existsSync(join(userData, 'statusline-chain.json'))).toBe(false);
   });
 
+  it('leaves settings.json untouched when there is nothing to remove', () => {
+    const before = readFileSync(settingsPath, 'utf8');
+    integration.setHooks(false, 120);
+    integration.setStatusline(false);
+    expect(readFileSync(settingsPath, 'utf8')).toBe(before);
+  });
+
+  it('keeps a failure of one part when the other part then succeeds', () => {
+    integration.setHooks(true, 120);
+    integration.setStatusline(true);
+    writeFileSync(join(userData, 'statusline-chain.json'), '{broken');
+    integration.setStatusline(false);
+    integration.setHooks(false, 120);
+    expect(integration.status(120).error).not.toBeNull();
+    writeFileSync(join(userData, 'statusline-chain.json'), JSON.stringify(original.statusLine));
+    integration.setStatusline(false);
+    expect(integration.status(120).error).toBeNull();
+    expect(settings()).toEqual(original);
+  });
+
   it('writes through a symlinked settings.json instead of replacing the link', (context) => {
     const real = join(root, 'dotfiles-settings.json');
     writeFileSync(real, JSON.stringify(original, null, 2));

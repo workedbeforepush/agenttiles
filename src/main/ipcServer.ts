@@ -4,15 +4,18 @@ import { existsSync, unlinkSync } from 'node:fs';
 import {
   LineSplitter,
   encode,
+  parseHello,
   parseMessage,
+  proofOf,
+  sameSecret,
   type Endpoint,
   type DecisionExtras,
   type PermissionDecision,
 } from '../core/protocol';
 import { log } from './log';
 
-/** Unauthenticated connections are dropped after this long without a valid message. */
-const AUTH_TIMEOUT_MS = 10_000;
+/** Unauthenticated connections are dropped after this long without a valid message; the hook sends at once. */
+const AUTH_TIMEOUT_MS = 2_000;
 const MAX_CONNECTIONS = 256;
 
 export interface IpcHandlers {
@@ -45,7 +48,8 @@ export class IpcServer {
     return new Promise((resolve, reject) => {
       server.once('error', reject);
       // Windows: elevated and non-elevated Claude Code sessions must both connect, so the pipe is open to every local
-      // process; the random name and the token keep others out. Elsewhere the socket lives in a 0700 directory.
+      // process; the token keeps others out, and the hello proof keeps the hook from talking to a squatter once the app
+      // is gone. Elsewhere the socket lives in a 0700 directory.
       const openToAll = process.platform === 'win32';
       server.listen({ path: this.path, readableAll: openToAll, writableAll: openToAll }, () => {
         server.off('error', reject);
@@ -74,6 +78,7 @@ export class IpcServer {
 
   private accept(socket: Socket): void {
     const splitter = new LineSplitter();
+    let greeted = false;
     socket.setEncoding('utf8');
     socket.setTimeout(AUTH_TIMEOUT_MS, () => {
       log.debug('ipc: idle unauthenticated connection dropped');
@@ -87,6 +92,11 @@ export class IpcServer {
         return;
       }
       for (const line of lines) {
+        if (socket.destroyed) return;
+        if (!greeted) {
+          greeted = this.answerHello(socket, line);
+          continue;
+        }
         try {
           this.handleLine(socket, line);
         } catch (error) {
@@ -106,9 +116,21 @@ export class IpcServer {
     });
   }
 
+  /** The hook's first line is a challenge: proving the token lets it tell this app from a squatter on a stale name. */
+  private answerHello(socket: Socket, line: string): boolean {
+    const nonce = parseHello(line);
+    if (!nonce) {
+      log.warn('ipc: connection without a valid hello rejected');
+      socket.destroy();
+      return false;
+    }
+    socket.write(encode({ proof: proofOf(this.endpoint.token, nonce) }));
+    return true;
+  }
+
   private handleLine(socket: Socket, line: string): void {
     const message = parseMessage(line);
-    if (!message || message.token !== this.endpoint.token) {
+    if (!message || !sameSecret(message.token, this.endpoint.token)) {
       log.warn('ipc: malformed or unauthenticated message rejected');
       socket.destroy();
       return;

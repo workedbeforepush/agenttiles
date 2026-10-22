@@ -24,9 +24,10 @@
     return parts.join(' · ');
   });
 
-  function decide(event: MouseEvent, tile: TileView, decision: 'allow' | 'deny', always = false): void {
+  /** Answers the request with the id the buttons were rendered for, never one that replaced it since. */
+  function decide(event: MouseEvent, id: string, decision: 'allow' | 'deny', always = false): void {
     event.stopPropagation();
-    if (tile.pending) void window.agenttiles.decidePermission(tile.pending.id, { decision, always });
+    void window.agenttiles.decidePermission(id, { decision, always });
   }
 </script>
 
@@ -65,15 +66,16 @@
           </button>
         {/if}
         {#if tile.pending && !tile.pending.questions && tile.pending.plan === null}
-          <button class="allow" onclick={(e) => decide(e, tile, 'allow')} title={prettyInput(tile.pending.toolInput)}>
+          {@const pending = tile.pending}
+          <button class="allow" onclick={(e) => decide(e, pending.id, 'allow')} title={prettyInput(pending.toolInput)}>
             {t('banner.allow')}
           </button>
-          {#if tile.pending.alwaysLabel}
-            <button class="always" onclick={(e) => decide(e, tile, 'allow', true)} title={tile.pending.alwaysLabel}>
+          {#if pending.alwaysLabel}
+            <button class="always" onclick={(e) => decide(e, pending.id, 'allow', true)} title={pending.alwaysLabel}>
               {t('banner.always')}
             </button>
           {/if}
-          <button class="deny" onclick={(e) => decide(e, tile, 'deny')} title={t('banner.deny')}>{t('banner.deny')}</button>
+          <button class="deny" onclick={(e) => decide(e, pending.id, 'deny')} title={t('banner.deny')}>{t('banner.deny')}</button>
         {/if}
       </div>
     {/each}

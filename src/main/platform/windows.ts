@@ -133,15 +133,24 @@ export function claudeProcessIds(): number[] {
   return [...processTable().values()].filter((p) => p.exe.toLowerCase() === 'claude.exe').map((p) => p.pid);
 }
 
-/** The process and its ancestors, nearest first. Stops at cycles and missing parents. */
+/**
+ * The process and its ancestors, nearest first. Stops at cycles, missing parents and parents created after their
+ * child: Windows keeps the parent pid of an exited parent, and a new process can reuse it. A start time that cannot
+ * be read (a process of another user) does not stop the walk.
+ */
 export function ancestry(pid: number, table: Map<number, ProcessInfo>): ProcessInfo[] {
   const chain: ProcessInfo[] = [];
   const seen = new Set<number>();
   let current = table.get(pid);
+  let started = processStartTime(pid);
   while (current && !seen.has(current.pid)) {
     chain.push(current);
     seen.add(current.pid);
-    current = table.get(current.ppid);
+    const parent = table.get(current.ppid);
+    const parentStarted = parent ? processStartTime(parent.pid) : null;
+    if (started !== null && parentStarted !== null && BigInt(parentStarted) > BigInt(started)) break;
+    current = parent;
+    started = parentStarted;
   }
   return chain;
 }

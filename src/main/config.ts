@@ -174,8 +174,13 @@ export class ConfigStore {
         window: null,
       };
     }
-    // A config.toml that does not parse is a user error worth surfacing: fail fast.
-    const raw = parse(readFileSync(this.path, 'utf8')) as Record<string, unknown>;
+    // A config.toml that does not parse is a user error worth surfacing: fail fast, naming the file.
+    let raw: Record<string, unknown>;
+    try {
+      raw = parse(readFileSync(this.path, 'utf8')) as Record<string, unknown>;
+    } catch (error) {
+      throw new Error(`${this.path}: ${(error as Error).message}`);
+    }
     const state = (raw['state'] ?? {}) as Record<string, unknown>;
     const renames = (raw['renames'] ?? {}) as Record<string, unknown>;
     return {

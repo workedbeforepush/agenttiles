@@ -75,6 +75,10 @@ export function createMainWindow(config: ConfigStore, shouldHideOnClose: () => b
 
   win.once('ready-to-show', () => win.show());
 
+  // The dashboard is one local page: it never opens windows or navigates away (session text is untrusted).
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  win.webContents.on('will-navigate', (event) => event.preventDefault());
+
   const devUrl = process.env['ELECTRON_RENDERER_URL'];
   if (devUrl) void win.loadURL(devUrl);
   else void win.loadFile(join(__dirname, '../renderer/index.html'));

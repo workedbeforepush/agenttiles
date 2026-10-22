@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 import { parseHead, readGitBranch } from '../src/main/git';
 
 const root = mkdtempSync(join(tmpdir(), 'agenttiles-git-'));
@@ -53,5 +53,23 @@ describe('git branch', () => {
     mkdirSync(plain);
     // The temp directory itself is not inside a repository on a normal machine.
     expect(readGitBranch(plain)).toBeNull();
+  });
+
+  it('notices a git init in a folder that was no repository, after a while', () => {
+    const later = join(root, 'init-later');
+    mkdirSync(later);
+    const now = Date.now();
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(now);
+    try {
+      expect(readGitBranch(later)).toBeNull();
+      mkdirSync(join(later, '.git'));
+      writeFileSync(join(later, '.git', 'HEAD'), 'ref: refs/heads/main\n');
+      // Not looked up on every refresh.
+      expect(readGitBranch(later)).toBeNull();
+      clock.mockReturnValue(now + 60_000);
+      expect(readGitBranch(later)).toBe('main');
+    } finally {
+      clock.mockRestore();
+    }
   });
 });
