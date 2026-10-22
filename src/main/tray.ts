@@ -1,6 +1,7 @@
 // Tray icon: the app icon plus a badge with the waiting count, painted by the renderer and sent as PNG.
 import { Menu, Tray, nativeImage, type NativeImage } from 'electron';
 import { APP_ICON_PNG } from './appId';
+import { t } from './i18n';
 
 const SIZE = 32;
 
@@ -19,16 +20,21 @@ export interface TrayActions {
 export class AppTray {
   private readonly tray: Tray;
 
-  constructor(actions: TrayActions) {
+  constructor(private readonly actions: TrayActions) {
     this.tray = new Tray(placeholderIcon());
     this.tray.setToolTip('AgentTiles');
     this.tray.on('click', () => actions.toggle());
+    this.updateMenu();
+  }
+
+  /** Builds the context menu in the current language; called again when the language changes. */
+  updateMenu(): void {
     this.tray.setContextMenu(
       Menu.buildFromTemplate([
-        { label: 'Show', click: () => actions.show() },
-        { label: 'Settings', click: () => actions.settings() },
+        { label: t('tray.show'), click: () => this.actions.show() },
+        { label: t('tray.settings'), click: () => this.actions.settings() },
         { type: 'separator' },
-        { label: 'Quit', click: () => actions.quit() },
+        { label: t('tray.quit'), click: () => this.actions.quit() },
       ]),
     );
   }

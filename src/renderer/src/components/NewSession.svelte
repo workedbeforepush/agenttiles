@@ -1,7 +1,9 @@
 <script lang="ts">
+  import WithCode from './WithCode.svelte';
   import { onMount } from 'svelte';
   import type { LaunchView } from '../../../core/types';
   import { since } from '../format';
+  import { t } from '../i18n.svelte';
 
   interface Props {
     now: number;
@@ -50,44 +52,41 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 <div class="backdrop" onclick={onClose}>
-  <div class="panel" role="dialog" tabindex="-1" aria-label="New session" onclick={(e) => e.stopPropagation()}>
+  <div class="panel" role="dialog" tabindex="-1" aria-label={t('newSession.title')} onclick={(e) => e.stopPropagation()}>
     <div class="head">
-      <h2>New session</h2>
-      <button class="close" onclick={onClose} aria-label="Close">✕</button>
+      <h2>{t('newSession.title')}</h2>
+      <button class="close" onclick={onClose} aria-label={t('newSession.close')}>✕</button>
     </div>
     {#if error}<p class="error">{error}</p>{/if}
 
-    <h3>Start in</h3>
+    <h3>{t('newSession.startIn')}</h3>
     <div class="projects">
       {#each view?.projects ?? [] as project (project.cwd)}
         <button class="project" disabled={busy} title={project.cwd} onclick={() => void launch(project.cwd, null)}>
           {project.project}
         </button>
       {/each}
-      <button class="project other" disabled={busy} onclick={() => void chooseFolder()}>Choose folder…</button>
+      <button class="project other" disabled={busy} onclick={() => void chooseFolder()}>{t('newSession.chooseFolder')}</button>
     </div>
 
     <div class="resume-head">
-      <h3>Resume</h3>
-      <input bind:value={query} placeholder="Search title or project" aria-label="Search sessions" />
+      <h3>{t('newSession.resume')}</h3>
+      <input bind:value={query} placeholder={t('newSession.searchPlaceholder')} aria-label={t('newSession.searchLabel')} />
     </div>
     <div class="sessions">
       {#if view === null && !error}
-        <p class="hint">Reading recent sessions…</p>
+        <p class="hint">{t('newSession.reading')}</p>
       {:else if sessions.length === 0}
-        <p class="hint">No ended sessions found.</p>
+        <p class="hint">{t('newSession.noSessions')}</p>
       {/if}
       {#each sessions as session (session.sessionId)}
         <button class="session" disabled={busy} title={session.cwd} onclick={() => void launch(session.cwd, session.sessionId)}>
           <span class="title">{session.title}</span>
-          <span class="meta">{session.project} · {since(session.lastAt, now)} ago</span>
+          <span class="meta">{t('newSession.sessionMeta', { project: session.project, ago: since(session.lastAt, now) })}</span>
         </button>
       {/each}
     </div>
-    <p class="hint">
-      Opens <code>claude</code> (or <code>claude --resume</code>) in a new terminal tab: Windows Terminal, iTerm2 or
-      Terminal.app, or your Linux terminal.
-    </p>
+    <p class="hint"><WithCode text={t('newSession.hint')} codes={{ claude: 'claude', resume: 'claude --resume' }} /></p>
   </div>
 </div>
 

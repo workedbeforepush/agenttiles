@@ -331,7 +331,7 @@ async function run(): Promise<void> {
   await escape();
 
   await click('.item.today');
-  await js(`[...document.querySelectorAll('.tabs button')].find((b) => b.textContent === '30 days').click()`);
+  await js(`[...document.querySelectorAll('.tabs button')].find((b) => b.textContent.trim() === '30 days').click()`);
   await sleep(300);
   await js(`document.querySelectorAll('.bars')[0].children[24].dispatchEvent(new MouseEvent('mouseenter'))`);
   await capture('stats.png');

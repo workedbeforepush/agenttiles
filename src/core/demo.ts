@@ -1,22 +1,9 @@
 // Invented sessions for the README screenshots and the tour: realistic, but no real project names, paths or costs.
-import type { HistoryPoint, PendingPermission, SessionState, Snapshot, TileView } from './types';
+import type { Activity, HistoryPoint, PendingPermission, SessionState, Snapshot, StateLabel, TileView } from './types';
 import { toolDiff } from './diff';
 import { suggestionLabel } from './permissions';
 
 export const MIN = 60_000;
-const LABELS: Record<SessionState, string> = {
-  working: 'working',
-  needsApproval: 'approve?',
-  needsInput: 'question',
-  done: 'ready',
-  idle: 'idle',
-  error: 'error',
-  limitHit: 'limit hit',
-  compacting: 'compacting',
-  shell: 'shell',
-  unknown: 'unknown',
-};
-
 /** A plausible state history over the last 30 minutes, ending in `last`. */
 function history(now: number, steps: SessionState[], last: SessionState, since: number): HistoryPoint[] {
   const start = now - 30 * MIN;
@@ -30,8 +17,8 @@ interface TileSpec {
   project: string;
   state: SessionState;
   sinceMin: number;
-  label?: string;
-  activity?: string | null;
+  label?: StateLabel;
+  activity?: Activity | null;
   model?: string;
   branch: string;
   added: number;
@@ -61,7 +48,7 @@ function tile(now: number, s: TileSpec): TileView {
     project: s.project,
     name: s.name,
     state: s.state,
-    stateLabel: s.label ?? LABELS[s.state],
+    label: s.label ?? s.state,
     stateSince: since,
     activity: s.activity ?? null,
     model: s.model ?? 'Opus 5.5',
@@ -194,7 +181,7 @@ export function snapshot(now: number, progress: DemoProgress = { approved: false
           project: 'api-gateway',
           state: 'working',
           sinceMin: 0,
-          activity: 'Edit: auth.ts',
+          activity: { kind: 'text', text: 'Edit: auth.ts' },
           branch: 'feature/jwt-rotation',
           added: 184,
           removed: 42,
@@ -230,7 +217,7 @@ export function snapshot(now: number, progress: DemoProgress = { approved: false
       project: 'web-shop',
       state: 'working',
       sinceMin: 4,
-      activity: 'Bash: npx playwright test checkout --project=chromium',
+      activity: { kind: 'text', text: 'Bash: npx playwright test checkout --project=chromium' },
       model: 'Sonnet 5.5',
       branch: 'test/checkout-e2e',
       added: 312,
@@ -254,7 +241,7 @@ export function snapshot(now: number, progress: DemoProgress = { approved: false
           project: 'data-pipeline',
           state: 'working',
           sinceMin: 0,
-          activity: 'Write: pipeline/clickhouse_sink.py',
+          activity: { kind: 'text', text: 'Write: pipeline/clickhouse_sink.py' },
           branch: 'main',
           added: 48,
           removed: 0,
@@ -271,7 +258,7 @@ export function snapshot(now: number, progress: DemoProgress = { approved: false
       project: 'data-pipeline',
       state: 'needsInput',
       sinceMin: 1,
-      activity: 'Which store should the analytics events go to?',
+      activity: { kind: 'text', text: 'Which store should the analytics events go to?' },
       branch: 'main',
       added: 0,
       removed: 0,
@@ -306,7 +293,7 @@ export function snapshot(now: number, progress: DemoProgress = { approved: false
       project: 'design-system',
       state: 'working',
       sinceMin: 12,
-      activity: 'Agent: migrate Button, Dialog and Tabs',
+      activity: { kind: 'text', text: 'Agent: migrate Button, Dialog and Tabs' },
       branch: 'chore/svelte5-runes',
       added: 1240,
       removed: 980,
@@ -331,8 +318,8 @@ export function snapshot(now: number, progress: DemoProgress = { approved: false
       project: 'mobile-app',
       state: 'needsInput',
       sinceMin: 5,
-      label: 'plan ready',
-      activity: 'Plan ready for review',
+      label: 'planReady',
+      activity: { kind: 'planReady' },
       model: 'Opus 5.5',
       branch: 'feature/dark-mode',
       added: 0,

@@ -28,8 +28,8 @@ import {
   type StatusLineConfig,
 } from '../core/hookConfig';
 import { log } from './log';
-
-const NODE_MISSING = 'Node.js was not found in PATH. AgentTiles hooks need Node.js installed.';
+import { t } from './i18n';
+import type { MessageKey } from '../core/i18n';
 
 export class Integration {
   readonly hookPath: string;
@@ -55,10 +55,10 @@ export class Integration {
     try {
       output = execFileSync('node', ['-p', 'process.execPath'], { encoding: 'utf8', windowsHide: true, timeout: 10_000 });
     } catch {
-      throw new Error(NODE_MISSING);
+      throw new Error(t('main.integration.nodeMissing'));
     }
     const path = output.trim();
-    if (!path) throw new Error(NODE_MISSING);
+    if (!path) throw new Error(t('main.integration.nodeMissing'));
     this.nodePath = path;
     return path;
   }
@@ -115,19 +115,21 @@ export class Integration {
     }
   }
 
-  private run(action: string, fn: () => void): void {
+  /** `action` names the step in the log, `failed` is the message the user sees when it fails. */
+  private run(action: string, failed: MessageKey, fn: () => void): void {
     try {
       fn();
       this.lastError = null;
       log.info(`integration: ${action}`);
     } catch (error) {
-      this.lastError = `${action} failed: ${(error as Error).message}`;
+      this.lastError = t(failed, { error: (error as Error).message });
       log.error(`integration: ${action} failed`, error);
     }
   }
 
   setHooks(enabled: boolean, permissionTimeoutSec: number): void {
-    this.run(enabled ? 'install hooks' : 'uninstall hooks', () => {
+    const failed = enabled ? 'main.integration.installHooksFailed' : 'main.integration.uninstallHooksFailed';
+    this.run(enabled ? 'install hooks' : 'uninstall hooks', failed, () => {
       if (!enabled) {
         this.updateSettings(uninstallHooks);
         return;
@@ -139,7 +141,8 @@ export class Integration {
   }
 
   setStatusline(enabled: boolean): void {
-    this.run(enabled ? 'install statusline' : 'uninstall statusline', () => {
+    const failed = enabled ? 'main.integration.installStatuslineFailed' : 'main.integration.uninstallStatuslineFailed';
+    this.run(enabled ? 'install statusline' : 'uninstall statusline', failed, () => {
       if (!enabled) {
         const previous = existsSync(this.chainPath)
           ? (JSON.parse(readFileSync(this.chainPath, 'utf8')) as StatusLineConfig)

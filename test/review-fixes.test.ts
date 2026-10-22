@@ -85,7 +85,7 @@ describe('tool failures', () => {
   it('keeps working after an ordinary tool failure and is not sticky', () => {
     const rec = record();
     applyHookEvent(rec, event('PostToolUseFailure', { tool_name: 'Grep', tool_input: { pattern: 'x' }, error: 'no matches' }), 1000);
-    expect(deriveState(rec)).toMatchObject({ state: 'working', activity: 'Grep: x failed: no matches' });
+    expect(deriveState(rec)).toMatchObject({ state: 'working', activity: { kind: 'failed', text: 'Grep: x: no matches' } });
     rec.registry = registry('idle', 2000);
     expect(deriveState(rec).state).toBe('idle');
   });

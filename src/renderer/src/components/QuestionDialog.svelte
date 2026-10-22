@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { QuestionView } from '../../../core/types';
+  import { t } from '../i18n.svelte';
 
   interface Props {
     id: string;
@@ -124,27 +125,27 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 <div class="backdrop" onclick={onClose}>
-  <div class="dialog" role="dialog" tabindex="-1" aria-label="Answer question" onclick={(e) => e.stopPropagation()}>
+  <div class="dialog" role="dialog" tabindex="-1" aria-label={t('dialogs.question.ariaLabel')} onclick={(e) => e.stopPropagation()}>
     <div class="head">
-      <span class="kind">Question</span>
+      <span class="kind">{t('dialogs.question.kind')}</span>
       <span class="session">{session}</span>
-      <button class="close" onclick={onClose} aria-label="Close">✕</button>
+      <button class="close" onclick={onClose} aria-label={t('dialogs.close')}>✕</button>
     </div>
 
     {#if questions.length > 1}
       <div class="tabs">
         {#each questions as question, i (i)}
           <button class="tab" class:active={i === step} class:done={answered[i]} onclick={() => go(i)}>
-            <span class="mark">{answered[i] ? '✓' : '○'}</span>{question.header || `Q${i + 1}`}
+            <span class="mark">{answered[i] ? '✓' : '○'}</span>{question.header || t('dialogs.question.tab', { n: i + 1 })}
           </button>
         {/each}
-        <span class="progress">{step + 1} / {questions.length}</span>
+        <span class="progress">{t('dialogs.question.progress', { step: step + 1, total: questions.length })}</span>
       </div>
     {/if}
 
     {#if q}
       <h3>{q.question}</h3>
-      {#if q.multiSelect}<p class="hint">Select all that apply</p>{/if}
+      {#if q.multiSelect}<p class="hint">{t('dialogs.question.selectAll')}</p>{/if}
       <div class="options" role={q.multiSelect ? 'group' : 'radiogroup'}>
         {#each q.options as option, row (option.label)}
           <button
@@ -177,7 +178,7 @@
           <input
             bind:this={otherInput}
             bind:value={other[step]}
-            placeholder="Type something…"
+            placeholder={t('dialogs.question.otherPlaceholder')}
             oninput={() => {
               if (!otherOn[step]) choose(otherRow);
             }}
@@ -187,15 +188,15 @@
     {/if}
 
     <div class="foot">
-      {#if failed}<span class="failed">Already answered or no longer waiting.</span>{/if}
-      <span class="keys">↑↓ select · 1–{rows} pick · Enter next · Esc close</span>
-      <button class="secondary" disabled={step === 0} onclick={() => go(step - 1)}>Back</button>
+      {#if failed}<span class="failed">{t('dialogs.alreadyAnswered')}</span>{/if}
+      <span class="keys">{t('dialogs.question.keys', { rows })}</span>
+      <button class="secondary" disabled={step === 0} onclick={() => go(step - 1)}>{t('dialogs.question.back')}</button>
       {#if last}
         <button class="primary" disabled={!complete || sending} onclick={() => void submit()}>
-          {sending ? 'Sending…' : 'Submit'}
+          {sending ? t('dialogs.question.sending') : t('dialogs.question.submit')}
         </button>
       {:else}
-        <button class="primary" onclick={() => go(step + 1)}>Next</button>
+        <button class="primary" onclick={() => go(step + 1)}>{t('dialogs.question.next')}</button>
       {/if}
     </div>
   </div>

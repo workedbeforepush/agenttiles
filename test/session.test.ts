@@ -53,7 +53,7 @@ describe('state derivation', () => {
     rec.registry = registry('shell', 2000);
     expect(deriveState(rec).state).toBe('shell');
     rec.registry = registry('teleporting', 2000);
-    expect(deriveState(rec)).toMatchObject({ state: 'unknown', label: 'teleporting' });
+    expect(deriveState(rec)).toMatchObject({ state: 'unknown', label: null });
   });
 
   it('distinguishes done from idle by the transcript for hook-less sessions', () => {
@@ -73,7 +73,7 @@ describe('state derivation', () => {
     rec.registry = registry('busy', 4000);
     expect(deriveState(rec).state).toBe('working');
     applyHookEvent(rec, event('PreToolUse', { tool_name: 'Bash', tool_input: { command: 'ls' } }), 4000);
-    expect(deriveState(rec)).toMatchObject({ state: 'working', activity: 'Bash: ls' });
+    expect(deriveState(rec)).toMatchObject({ state: 'working', activity: { kind: 'text', text: 'Bash: ls' } });
   });
 
   it('keeps a fresh hook session idle until a turn finished', () => {
@@ -91,11 +91,11 @@ describe('state derivation', () => {
     applyHookEvent(rec, event('PreToolUse', { tool_name: 'AskUserQuestion', tool_input: {} }), 2000);
     expect(deriveState(rec)).toMatchObject({ state: 'needsInput', label: 'question' });
     applyHookEvent(rec, event('PreToolUse', { tool_name: 'ExitPlanMode', tool_input: {} }), 2100);
-    expect(deriveState(rec)).toMatchObject({ state: 'needsInput', label: 'plan ready' });
+    expect(deriveState(rec)).toMatchObject({ state: 'needsInput', label: 'planReady' });
     applyHookEvent(rec, event('Notification', { notification_type: 'permission_prompt' }), 2200);
     expect(deriveState(rec).state).toBe('needsApproval');
     applyHookEvent(rec, event('StopFailure', { error: 'overloaded' }), 2300);
-    expect(deriveState(rec)).toMatchObject({ state: 'error', activity: 'overloaded' });
+    expect(deriveState(rec)).toMatchObject({ state: 'error', activity: { kind: 'text', text: 'overloaded' } });
     applyHookEvent(rec, event('PreCompact'), 2400);
     expect(deriveState(rec).state).toBe('compacting');
   });
@@ -129,7 +129,7 @@ describe('permissions', () => {
   it('shows a pending permission until a matching tool event releases it', () => {
     const rec = record();
     addPending(rec, 'p1', event('PermissionRequest', bash), 1000);
-    expect(deriveState(rec)).toMatchObject({ state: 'needsApproval', activity: 'Bash: rm -rf build' });
+    expect(deriveState(rec)).toMatchObject({ state: 'needsApproval', activity: { kind: 'text', text: 'Bash: rm -rf build' } });
     const other = applyHookEvent(rec, event('PostToolUse', { tool_name: 'Read', tool_input: { file_path: 'x' } }), 1100);
     expect(other.release).toEqual([]);
     const matching = applyHookEvent(rec, event('PostToolUse', bash), 1200);
@@ -165,9 +165,9 @@ describe('tiles', () => {
     const rec = record();
     rec.registry = registry('busy', 2000);
     rec.transcript.activeTool = 'Bash: npm test';
-    expect(toTile(rec, { rename: null, pinned: false, branch: null }).activity).toBe('Bash: npm test');
+    expect(toTile(rec, { rename: null, pinned: false, branch: null }).activity).toEqual({ kind: 'text', text: 'Bash: npm test' });
     applyHookEvent(rec, event('PostToolUse', { tool_name: 'Bash', tool_input: {} }), 1000);
-    expect(toTile(rec, { rename: null, pinned: false, branch: null }).activity).toBe('thinking');
+    expect(toTile(rec, { rename: null, pinned: false, branch: null }).activity).toEqual({ kind: 'thinking' });
   });
 
   it('keeps stateSince while the state is unchanged and reports the previous state on change', () => {
@@ -256,7 +256,7 @@ describe('failures', () => {
     const rec = record();
     applyHookEvent(rec, event('StopFailure', { error: 'server_error' }), 1000);
     rec.registry = registry('idle', 2000);
-    expect(deriveState(rec)).toMatchObject({ state: 'error', activity: 'server_error' });
+    expect(deriveState(rec)).toMatchObject({ state: 'error', activity: { kind: 'text', text: 'server_error' } });
     rec.registry = registry('busy', 3000);
     expect(deriveState(rec).state).toBe('working');
   });

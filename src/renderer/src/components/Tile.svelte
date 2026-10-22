@@ -2,7 +2,9 @@
   import type { TileAction, TileView } from '../../../core/types';
   import { markdownHtml } from '../markdown';
   import DiffLines from './DiffLines.svelte';
-  import { COST_HINT, TINTED, duration, plainText, prettyInput, since, stateColor, usd } from '../format';
+  import { TINTED, duration, plainText, prettyInput, since, stateColor, usd } from '../format';
+  import { t } from '../i18n.svelte';
+  import { activityText, stateText } from '../../../core/i18n/view';
 
 
   interface Props {
@@ -75,8 +77,8 @@
 
   /** First heading or line of a plan, for the tile. */
   function planTitle(plan: string): string {
-    const line = plan.split('\n').find((l) => l.trim().length > 0) ?? 'Plan';
-    return line.replace(/^#+\s*/, '').replace(/^Plan:\s*/i, '').trim() || 'Plan';
+    const line = plan.split('\n').find((l) => l.trim().length > 0) ?? t('tile.ask.plan');
+    return line.replace(/^#+\s*/, '').replace(/^Plan:\s*/i, '').trim() || t('tile.ask.plan');
   }
 
   function enter(): void {
@@ -125,21 +127,26 @@
     return result;
   });
 
+  const activity = $derived(activityText(tile.activity, t));
+
   const previousTools = $derived(
-    (tile.recentTools.at(-1) === tile.activity ? tile.recentTools.slice(0, -1) : tile.recentTools).slice(-2).reverse(),
+    (tile.recentTools.at(-1) === activity ? tile.recentTools.slice(0, -1) : tile.recentTools).slice(-2).reverse(),
   );
 
-  const activityText = $derived.by(() => {
+  const activityLine = $derived.by(() => {
     if (tile.state === 'limitHit') {
-      const reset = fiveHourResetsAt !== null ? `resets in ${since(now, fiveHourResetsAt * 1000)}` : 'rate limit reached';
-      return tile.activity ? `${reset} · ${tile.activity}` : reset;
+      const reset =
+        fiveHourResetsAt !== null
+          ? t('tile.limit.resetsIn', { duration: since(now, fiveHourResetsAt * 1000) })
+          : t('tile.limit.reached');
+      return activity ? t('tile.limit.withActivity', { reset, activity }) : reset;
     }
-    return tile.activity ?? '';
+    return activity ?? '';
   });
 
   const turnText = $derived.by(() => {
-    if (tile.turnStartedAt !== null) return `turn ${since(tile.turnStartedAt, now)}`;
-    if (tile.lastTurnMs !== null && tile.state === 'done') return `took ${duration(tile.lastTurnMs)}`;
+    if (tile.turnStartedAt !== null) return t('tile.turn', { duration: since(tile.turnStartedAt, now) });
+    if (tile.lastTurnMs !== null && tile.state === 'done') return t('tile.took', { duration: duration(tile.lastTurnMs) });
     return null;
   });
 
@@ -181,11 +188,11 @@
   ondrop={drop}
 >
   <div class="top">
-    {#if index <= 9}<span class="index" title="Press {index} to select">{index}</span>{/if}
-    <span class="chip"><span class="dot"></span>{tile.stateLabel}</span>
+    {#if index <= 9}<span class="index" title={t('tile.selectHint', { index })}>{index}</span>{/if}
+    <span class="chip"><span class="dot"></span>{stateText(tile.label, t)}</span>
     <span class="since">{since(tile.stateSince, now)}</span>
     {#if turnText}<span class="turn">{turnText}</span>{/if}
-    {#if tile.pinned}<span class="pin" title="Pinned">●</span>{/if}
+    {#if tile.pinned}<span class="pin" title={t('tile.pinned')}>●</span>{/if}
   </div>
 
   <div class="title">
@@ -209,11 +216,11 @@
 
   {#if git.branch || git.pr || git.linesAdded !== null}
     <div class="git">
-      {#if git.branch}<span class="branch" title="Branch">⎇ {git.branch}</span>{/if}
-      {#if git.worktree}<span title="Worktree">wt {git.worktree}</span>{/if}
+      {#if git.branch}<span class="branch" title={t('tile.git.branch')}>⎇ {git.branch}</span>{/if}
+      {#if git.worktree}<span title={t('tile.git.worktree')}>{t('tile.git.worktreeName', { name: git.worktree })}</span>{/if}
       {#if git.pr}<span class="pr" title={git.pr.url ?? ''}>#{git.pr.number}{git.pr.reviewState ? ` · ${git.pr.reviewState}` : ''}</span>{/if}
       {#if git.linesAdded !== null || git.linesRemoved !== null}
-        <span class="lines" title="Lines Claude added / removed in this session (all files it edited, not a git diff)">
+        <span class="lines" title={t('tile.git.linesHint')}>
           {#if git.linesAdded !== null}<span class="add">+{git.linesAdded}</span>{/if}
           {#if git.linesRemoved !== null}<span class="del">−{git.linesRemoved}</span>{/if}
         </span>
@@ -227,7 +234,7 @@
       <div class="reply" title={tile.lastAssistant}>{plainText(tile.lastAssistant ?? '')}</div>
     {:else}
       {#if !tile.pending}
-        <div class="activity" title={activityText}>{activityText}</div>
+        <div class="activity" title={activityLine}>{activityLine}</div>
       {/if}
       {#if variant === 'card'}
         {#each previousTools as tool, i (i)}
@@ -241,10 +248,10 @@
     {@const questions = tile.pending.questions}
     <div class="ask">
       <span class="ask-text" title={questions.map((q) => q.question).join('\n')}>
-        {questions[0]?.question ?? 'Question'}
+        {questions[0]?.question ?? t('tile.ask.question')}
       </span>
       <div class="ask-row">
-        {#if questions.length > 1}<span class="ask-more">{questions.length} questions</span>{/if}
+        {#if questions.length > 1}<span class="ask-more">{t('tile.ask.questions', { count: questions.length })}</span>{/if}
         <button
           class="answer"
           onclick={(e) => {
@@ -252,16 +259,16 @@
             onAnswer(tile.sessionId);
           }}
         >
-          Answer…
+          {t('tile.ask.answer')}
         </button>
       </div>
     </div>
   {:else if tile.pending?.plan != null}
     <div class="ask">
-      <span class="ask-text" title="Plan ready for review">{planTitle(tile.pending.plan)}</span>
+      <span class="ask-text" title={t('activity.planReady')}>{planTitle(tile.pending.plan)}</span>
       <div class="ask-row">
-        <span class="ask-more">plan ready</span>
-        <button class="answer" onclick={review}>Review plan…</button>
+        <span class="ask-more">{t('state.planReady')}</span>
+        <button class="answer" onclick={review}>{t('tile.ask.reviewPlan')}</button>
       </div>
     </div>
   {:else if tile.pending}
@@ -269,40 +276,40 @@
     {#if variant === 'card'}
       {#if pending.diff}
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <div class="pending-input diff" title="Click to review the full change" onclick={review}>
+        <div class="pending-input diff" title={t('tile.pending.diffHint')} onclick={review}>
           <DiffLines lines={pending.diff.lines} limit={12} />
         </div>
       {:else}
-        <pre class="pending-input" title="Full request">{prettyInput(pending.toolInput)}</pre>
+        <pre class="pending-input" title={t('tile.pending.fullRequest')}>{prettyInput(pending.toolInput)}</pre>
       {/if}
     {/if}
     <div class="actions">
-      <button class="allow" onclick={(e) => decide(e, 'allow')} title={prettyInput(pending.toolInput)}>Allow</button>
+      <button class="allow" onclick={(e) => decide(e, 'allow')} title={prettyInput(pending.toolInput)}>{t('tile.allow')}</button>
       {#if pending.alwaysLabel}
-        <button class="always" onclick={(e) => decide(e, 'allow', true)} title={pending.alwaysLabel}>Always</button>
+        <button class="always" onclick={(e) => decide(e, 'allow', true)} title={pending.alwaysLabel}>{t('tile.always')}</button>
       {/if}
-      {#if pending.diff}<button class="review" onclick={review} title="Review the change">Diff</button>{/if}
-      <button class="deny" onclick={(e) => decide(e, 'deny')} title="Deny (D)">Deny</button>
+      {#if pending.diff}<button class="review" onclick={review} title={t('tile.diffHint')}>{t('tile.diff')}</button>{/if}
+      <button class="deny" onclick={(e) => decide(e, 'deny')} title={t('tile.denyHint')}>{t('tile.deny')}</button>
     </div>
   {/if}
 
   <div class="footer">
     {#if tile.contextPct !== null}
-      <span class="context" class:warn={contextWarn} title="Context window used">
+      <span class="context" class:warn={contextWarn} title={t('tile.footer.contextHint')}>
         <span class="bar"><span style:width="{Math.min(100, tile.contextPct)}%"></span></span>
         {Math.round(tile.contextPct)}%
       </span>
-      {#if contextWarn}<span class="compact">compact soon</span>{/if}
+      {#if contextWarn}<span class="compact">{t('tile.footer.compactSoon')}</span>{/if}
     {/if}
-    {#if tile.costUsd !== null}<span title={COST_HINT}>{usd(tile.costUsd)}</span>{/if}
-    {#if tile.subagents > 0}<span>{tile.subagents} agent{tile.subagents === 1 ? '' : 's'}</span>{/if}
-    {#if tile.tasksTotal > 0}<span>{tile.tasksDone}/{tile.tasksTotal} tasks</span>{/if}
-    {#if tile.jobId !== null}<span class="bg" title="Background session (claude --bg): click opens it with claude attach">bg</span>{/if}
-    {#if !tile.hooks}<span class="nohooks" title="No hook events from this session yet">no hooks</span>{/if}
+    {#if tile.costUsd !== null}<span title={t('format.costHint')}>{usd(tile.costUsd)}</span>{/if}
+    {#if tile.subagents > 0}<span>{t('tile.footer.agents', { count: tile.subagents })}</span>{/if}
+    {#if tile.tasksTotal > 0}<span>{t('tile.footer.tasks', { done: tile.tasksDone, total: tile.tasksTotal })}</span>{/if}
+    {#if tile.jobId !== null}<span class="bg" title={t('tile.footer.bgHint')}>{t('tile.footer.bg')}</span>{/if}
+    {#if !tile.hooks}<span class="nohooks" title={t('tile.footer.noHooksHint')}>{t('tile.footer.noHooks')}</span>{/if}
   </div>
 
   {#if variant === 'card'}
-    <div class="history" title="Last 30 minutes">
+    <div class="history" title={t('tile.historyHint')}>
       {#each segments as segment, i (i)}
         <span style:width="{segment.pct}%" style:background={segment.state === 'none' ? 'transparent' : stateColor(segment.state as TileView['state'])}></span>
       {/each}
@@ -312,12 +319,12 @@
   {#if hover && hasDetails && !menu}
     <div class="details">
       {#if tile.pending && !tile.pending.questions}
-        <div class="label">{tile.pending.toolName} wants to run</div>
+        <div class="label">{t('tile.details.wantsToRun', { tool: tile.pending.toolName })}</div>
         <pre>{prettyInput(tile.pending.toolInput)}</pre>
       {/if}
       {#if tile.pending?.questions}
         {#each tile.pending.questions as q, i (i)}
-          <div class="label">{q.header || 'Question'}</div>
+          <div class="label">{q.header || t('tile.details.question')}</div>
           <p>{q.question}</p>
           <ul class="tasks">
             {#each q.options as option (option.label)}
@@ -327,7 +334,7 @@
         {/each}
       {/if}
       {#if tile.tasks.length > 0}
-        <div class="label">Tasks</div>
+        <div class="label">{t('tile.details.tasks')}</div>
         <ul class="tasks">
           {#each tile.tasks as task, i (i)}
             <li class:done={task.done}>{task.done ? '☑' : '☐'} {task.subject}</li>
@@ -335,15 +342,15 @@
         </ul>
       {/if}
       {#if tile.subagentTypes.length > 0}
-        <div class="label">Running subagents</div>
+        <div class="label">{t('tile.details.runningSubagents')}</div>
         <p>{tile.subagentTypes.join(', ')}</p>
       {/if}
       {#if tile.lastPrompt}
-        <div class="label">Last prompt</div>
+        <div class="label">{t('tile.details.lastPrompt')}</div>
         <p class="md">{@html markdownHtml(tile.lastPrompt)}</p>
       {/if}
       {#if tile.lastAssistant}
-        <div class="label">Last reply</div>
+        <div class="label">{t('tile.details.lastReply')}</div>
         <p class="md">{@html markdownHtml(tile.lastAssistant)}</p>
       {/if}
     </div>
@@ -353,20 +360,20 @@
 {#if menu}
   <div class="menu" style:left="{menu.x}px" style:top="{menu.y}px" role="menu">
     {#if tile.pinned}
-      <button onclick={() => act('unpin')}>Unpin</button>
+      <button onclick={() => act('unpin')}>{t('tile.menu.unpin')}</button>
     {:else}
-      <button onclick={() => act('pin')}>Pin</button>
+      <button onclick={() => act('pin')}>{t('tile.menu.pin')}</button>
     {/if}
-    <button onclick={startRename} title="Leave empty to restore the original name">Rename…</button>
+    <button onclick={startRename} title={t('tile.menu.renameHint')}>{t('tile.menu.rename')}</button>
     <hr />
-    <button onclick={() => act('hideSession')}>Hide session</button>
-    <button onclick={() => act('hideProject')}>Hide project</button>
+    <button onclick={() => act('hideSession')}>{t('tile.menu.hideSession')}</button>
+    <button onclick={() => act('hideProject')}>{t('tile.menu.hideProject')}</button>
     <hr />
-    <button onclick={() => act('openFolder')}>Open folder</button>
-    <button onclick={() => act('copySessionId')}>Copy session id</button>
+    <button onclick={() => act('openFolder')}>{t('tile.menu.openFolder')}</button>
+    <button onclick={() => act('copySessionId')}>{t('tile.menu.copySessionId')}</button>
     {#if tile.jobId !== null}
       <hr />
-      <button onclick={() => act('stop')}>Stop background session…</button>
+      <button onclick={() => act('stop')}>{t('tile.menu.stopBackground')}</button>
     {/if}
   </div>
 {/if}

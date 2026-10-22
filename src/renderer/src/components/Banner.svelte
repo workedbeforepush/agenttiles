@@ -2,7 +2,8 @@
   import type { KeyAction, KeyBinding, TileView } from '../../../core/types';
   import { displayCombo } from '../keys';
   import { prettyInput, since, stateColor } from '../format';
-
+  import { activityText, stateText } from '../../../core/i18n/view';
+  import { t } from '../i18n.svelte';
 
   interface Props {
     waiting: { tile: TileView; index: number }[];
@@ -17,9 +18,9 @@
   const hint = $derived.by(() => {
     if (!keys) return '';
     const parts: string[] = [];
-    if (keys.selectTile.enabled) parts.push('1–9 select');
-    if (keys.deny.enabled) parts.push(`${displayCombo(keys.deny.key)} deny`);
-    if (keys.jump.enabled) parts.push(`${displayCombo(keys.jump.key)} jump`);
+    if (keys.selectTile.enabled) parts.push(t('banner.keys.select'));
+    if (keys.deny.enabled) parts.push(t('banner.keys.deny', { key: displayCombo(keys.deny.key) }));
+    if (keys.jump.enabled) parts.push(t('banner.keys.jump', { key: displayCombo(keys.jump.key) }));
     return parts.join(' · ');
   });
 
@@ -29,8 +30,8 @@
   }
 </script>
 
-<section class="banner" aria-label="Sessions waiting for you">
-  <span class="title">Needs you</span>
+<section class="banner" aria-label={t('banner.label')}>
+  <span class="title">{t('banner.title')}</span>
   <div class="items">
     {#each waiting as { tile, index } (tile.sessionId)}
       <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -40,14 +41,16 @@
         role="button"
         tabindex="0"
         onclick={() => void window.agenttiles.tileAction(tile.sessionId, 'focus')}
-        title="Jump to terminal"
+        title={t('banner.jump')}
       >
         {#if index <= 9}<span class="key">{index}</span>{/if}
-        <span class="label">{tile.stateLabel}</span>
+        <span class="label">{stateText(tile.label, t)}</span>
         <span class="name">{tile.name}</span>
         <!-- Questions and plans say what they are about in the activity; tool requests in their summary. -->
         <span class="what">
-          {(tile.pending?.questions || tile.pending?.plan != null ? tile.activity : tile.pending?.summary) ?? tile.activity ?? ''}
+          {(tile.pending?.questions || tile.pending?.plan != null ? activityText(tile.activity, t) : tile.pending?.summary) ??
+            activityText(tile.activity, t) ??
+            ''}
         </span>
         <span class="since">{since(tile.stateSince, now)}</span>
         {#if tile.pending?.questions || tile.pending?.plan != null || tile.pending?.diff}
@@ -58,19 +61,19 @@
               onAnswer(tile.sessionId);
             }}
           >
-            {tile.pending?.questions ? 'Answer…' : 'Review…'}
+            {tile.pending?.questions ? t('banner.answer') : t('banner.review')}
           </button>
         {/if}
         {#if tile.pending && !tile.pending.questions && tile.pending.plan === null}
           <button class="allow" onclick={(e) => decide(e, tile, 'allow')} title={prettyInput(tile.pending.toolInput)}>
-            Allow
+            {t('banner.allow')}
           </button>
           {#if tile.pending.alwaysLabel}
             <button class="always" onclick={(e) => decide(e, tile, 'allow', true)} title={tile.pending.alwaysLabel}>
-              Always
+              {t('banner.always')}
             </button>
           {/if}
-          <button class="deny" onclick={(e) => decide(e, tile, 'deny')} title="Deny">Deny</button>
+          <button class="deny" onclick={(e) => decide(e, tile, 'deny')} title={t('banner.deny')}>{t('banner.deny')}</button>
         {/if}
       </div>
     {/each}

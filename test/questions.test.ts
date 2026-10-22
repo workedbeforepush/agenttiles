@@ -47,7 +47,7 @@ describe('AskUserQuestion', () => {
   it('shows a held question as needsInput with the question text and the parsed questions', () => {
     const rec = newRecord('s', '/x', 1);
     addPending(rec, 'q1', { session_id: 's', tool_name: 'AskUserQuestion', tool_input: input }, 5);
-    expect(deriveState(rec)).toMatchObject({ state: 'needsInput', label: 'question', activity: 'Which color do you prefer?' });
+    expect(deriveState(rec)).toMatchObject({ state: 'needsInput', label: 'question', activity: { kind: 'text', text: 'Which color do you prefer?' } });
     const tile = toTile(rec, { rename: null, pinned: false, branch: null });
     expect(tile.pending?.questions?.length).toBe(2);
   });

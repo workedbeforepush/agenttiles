@@ -3,6 +3,7 @@
   import type { DecisionRequest, PendingPermission } from '../../../core/types';
   import { markdownHtml } from '../markdown';
   import DiffLines from './DiffLines.svelte';
+  import { t } from '../i18n.svelte';
 
   interface Props {
     pending: PendingPermission;
@@ -63,13 +64,13 @@
     style:--c={color}
     role="dialog"
     tabindex="-1"
-    aria-label={isPlan ? 'Review plan' : 'Review change'}
+    aria-label={isPlan ? t('dialogs.review.ariaPlan') : t('dialogs.review.ariaChange')}
     onclick={(e) => e.stopPropagation()}
   >
     <div class="head">
-      <span class="kind">{isPlan ? 'Plan' : pending.toolName}</span>
+      <span class="kind">{isPlan ? t('dialogs.review.plan') : pending.toolName}</span>
       <span class="session">{session}</span>
-      <button class="close" onclick={onClose} aria-label="Close">✕</button>
+      <button class="close" onclick={onClose} aria-label={t('dialogs.close')}>✕</button>
     </div>
 
     {#if pending.plan !== null}
@@ -84,35 +85,35 @@
       </div>
       <div class="body">
         <DiffLines lines={diff.lines} />
-        {#if diff.truncated}<p class="more">Diff shortened; the terminal shows the full change.</p>{/if}
+        {#if diff.truncated}<p class="more">{t('dialogs.review.truncated')}</p>{/if}
       </div>
     {/if}
 
     {#if !isPlan}
-      <textarea bind:value={feedback} rows="2" placeholder="Tell Claude why, when you deny (optional)"></textarea>
+      <textarea bind:value={feedback} rows="2" placeholder={t('dialogs.review.feedbackPlaceholder')}></textarea>
     {/if}
 
     <div class="foot">
       {#if failed}
-        <span class="failed">Already answered or no longer waiting.</span>
+        <span class="failed">{t('dialogs.alreadyAnswered')}</span>
       {:else if isPlan}
-        <span class="keys">Claude Code takes the plan decision only in its own dialog.</span>
+        <span class="keys">{t('dialogs.review.planHint')}</span>
       {:else}
-        <span class="keys">Esc close</span>
+        <span class="keys">{t('dialogs.review.keys')}</span>
       {/if}
       {#if isPlan}
-        <button class="allow" onclick={openTerminal}>Decide in terminal</button>
+        <button class="allow" onclick={openTerminal}>{t('dialogs.review.decideInTerminal')}</button>
       {:else}
-        <button class="deny" disabled={sending} onclick={deny}>Deny</button>
+        <button class="deny" disabled={sending} onclick={deny}>{t('dialogs.review.deny')}</button>
         {#if pending.alwaysLabel}
           <button class="always" disabled={sending} onclick={() => void send({ decision: 'allow', always: true })} title={pending.alwaysLabel}>
-            Always allow
+            {t('dialogs.review.alwaysAllow')}
           </button>
         {/if}
-        <button class="allow" disabled={sending} onclick={() => void send({ decision: 'allow' })}>Allow</button>
+        <button class="allow" disabled={sending} onclick={() => void send({ decision: 'allow' })}>{t('dialogs.review.allow')}</button>
       {/if}
     </div>
-    {#if !isPlan && pending.alwaysLabel}<p class="always-hint">Always allow: {pending.alwaysLabel}</p>{/if}
+    {#if !isPlan && pending.alwaysLabel}<p class="always-hint">{t('dialogs.review.alwaysHint', { label: pending.alwaysLabel })}</p>{/if}
   </div>
 </div>
 

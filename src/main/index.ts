@@ -40,6 +40,8 @@ import { APP_ID, APP_NAME, persistentIcons } from './appId';
 import { SessionStore } from './store';
 import { Updater } from './updater';
 import { AppTray } from './tray';
+import { locale, setLocale, t } from './i18n';
+import { resolveLocale } from '../core/i18n';
 import { createMainWindow } from './window';
 
 // A bug in one callback must never take the dashboard down; log it and keep running.
@@ -157,10 +159,10 @@ async function start(): Promise<void> {
       rec.transcript.aiTitle,
     ].filter((t): t is string => t !== null);
     const result = await focusSession(rec.sessionId, reg.pid, titles);
-    if (result === 'unsupported') notifier.info('AgentTiles', 'Focus jump is not supported on this OS.');
-    else if (result === 'noX11') notifier.info('AgentTiles', 'Focus jump needs an X11 session; Wayland does not let apps raise windows.');
-    else if (result === 'noXdotool') notifier.info('AgentTiles', 'Focus jump needs xdotool. Install it with your package manager.');
-    else if (result === 'notFound') notifier.info('AgentTiles', `No terminal window found for ${rec.sessionId}.`);
+    if (result === 'unsupported') notifier.info('AgentTiles', t('main.focus.unsupported'));
+    else if (result === 'noX11') notifier.info('AgentTiles', t('main.focus.noX11'));
+    else if (result === 'noXdotool') notifier.info('AgentTiles', t('main.focus.noXdotool'));
+    else if (result === 'notFound') notifier.info('AgentTiles', t('main.focus.notFound', { sessionId: rec.sessionId }));
   }
 
   async function stopBackground(sessionId: string): Promise<void> {
@@ -169,10 +171,10 @@ async function start(): Promise<void> {
     if (!jobId) return;
     const { response } = await dialog.showMessageBox(win, {
       type: 'question',
-      title: 'Stop background session',
-      message: `Stop "${name}"?`,
-      detail: `Runs "claude stop ${jobId}". The conversation is kept; resume it from New session.`,
-      buttons: ['Stop', 'Cancel'],
+      title: t('main.stopDialog.title'),
+      message: t('main.stopDialog.message', { name }),
+      detail: t('main.stopDialog.detail', { jobId }),
+      buttons: [t('main.stopDialog.stop'), t('main.stopDialog.cancel')],
       defaultId: 1,
       cancelId: 1,
     });
@@ -181,7 +183,7 @@ async function start(): Promise<void> {
       await stopSession(jobId);
     } catch (error) {
       log.warn(`stop failed: ${(error as Error).message}`);
-      notifier.info('AgentTiles', `claude stop ${jobId} failed: ${(error as Error).message}`);
+      notifier.info('AgentTiles', t('main.stopDialog.failed', { jobId, error: (error as Error).message }));
     }
   }
 
@@ -198,13 +200,18 @@ async function start(): Promise<void> {
     }
     if (!ok) {
       log.warn(`global hotkey ${s.hotkey} could not be registered`);
-      notifier.info('AgentTiles', `Hotkey ${s.hotkey} is not available.`);
+      notifier.info('AgentTiles', t('main.hotkeyUnavailable', { hotkey: s.hotkey }));
     }
   }
 
   function applySettings(previous: Settings | null): void {
     const s = settings();
     nativeTheme.themeSource = s.theme;
+    const nextLocale = resolveLocale(s.language, app.getPreferredSystemLanguages());
+    if (nextLocale !== locale()) {
+      setLocale(nextLocale);
+      tray.updateMenu();
+    }
     win.setAlwaysOnTop(s.alwaysOnTop);
     setLogLevel(s.logLevel);
     if (process.platform === 'linux') {
@@ -232,6 +239,7 @@ async function start(): Promise<void> {
       integration: status,
       askHooks: !status.hooksInstalled && !hookPromptClosed && !config.config.hookPromptOff && config.config.tourDone,
       showTour: !config.config.tourDone,
+      locale: locale(),
       platform: process.platform,
     };
   };
@@ -360,7 +368,7 @@ async function start(): Promise<void> {
   });
   ipcMain.handle('sessions:recent', () => recentSessions(new Set(snapshot.tiles.map((t) => t.sessionId))));
   ipcMain.handle('sessions:launch', async (_e, cwd: unknown, sessionId: unknown) => {
-    if (typeof cwd !== 'string' || (sessionId !== null && typeof sessionId !== 'string')) return 'Invalid request.';
+    if (typeof cwd !== 'string' || (sessionId !== null && typeof sessionId !== 'string')) return t('main.invalidRequest');
     try {
       await launchSession(cwd, sessionId);
       return null;
@@ -377,9 +385,9 @@ async function start(): Promise<void> {
   ipcMain.handle('stats:export', async () => {
     await usage.scan();
     const result = await dialog.showSaveDialog(win, {
-      title: 'Export usage',
+      title: t('main.exportDialog.title'),
       defaultPath: join(app.getPath('documents'), 'agenttiles-usage.csv'),
-      filters: [{ name: 'CSV', extensions: ['csv'] }],
+      filters: [{ name: t('main.exportDialog.csv'), extensions: ['csv'] }],
     });
     if (result.canceled || !result.filePath) return null;
     writeFileSync(result.filePath, usageCsv(usage.allDays()));
@@ -393,7 +401,7 @@ async function start(): Promise<void> {
   function showWaitingCount(badgePng: string | null, count: number): void {
     if (process.platform === 'win32') {
       const badge = typeof badgePng === 'string' ? nativeImage.createFromDataURL(badgePng) : null;
-      if (!win.isDestroyed()) win.setOverlayIcon(badge && !badge.isEmpty() ? badge : null, `${count} waiting`);
+      if (!win.isDestroyed()) win.setOverlayIcon(badge && !badge.isEmpty() ? badge : null, t('main.waitingBadge', { count }));
     } else if (process.platform === 'darwin') {
       app.dock?.setBadge(count > 0 ? String(count) : '');
     } else {
@@ -469,10 +477,10 @@ async function start(): Promise<void> {
     if (view.available && view.canInstall && !view.failed) {
       const { response } = await dialog.showMessageBox(win, {
         type: 'info',
-        title: 'Update AgentTiles',
-        message: `Update AgentTiles to ${view.available}?`,
-        detail: `AgentTiles quits, runs "${view.command}" and starts again in a few seconds.`,
-        buttons: ['Update and restart', 'Later'],
+        title: t('main.updateDialog.title'),
+        message: t('main.updateDialog.confirm', { version: view.available }),
+        detail: t('main.updateDialog.confirmDetail', { command: view.command }),
+        buttons: [t('main.updateDialog.updateAndRestart'), t('main.updateDialog.later')],
         defaultId: 0,
         cancelId: 1,
       });
@@ -484,10 +492,14 @@ async function start(): Promise<void> {
     }
     const { response } = await dialog.showMessageBox(win, {
       type: view.failed ? 'warning' : 'info',
-      title: 'Update AgentTiles',
-      message: view.failed ? 'The last update did not work.' : `AgentTiles ${view.available ?? ''} is available.`,
-      detail: `${view.failed ? `npm said:\n${view.failed}\n\n` : ''}Update in a terminal with:\n${view.command}`,
-      buttons: ['Copy command', 'Close'],
+      title: t('main.updateDialog.title'),
+      message: view.failed
+        ? t('main.updateDialog.failed')
+        : t('main.updateDialog.available', { version: view.available ?? '' }),
+      detail: view.failed
+        ? t('main.updateDialog.failedDetail', { output: view.failed, command: view.command })
+        : t('main.updateDialog.manualDetail', { command: view.command }),
+      buttons: [t('main.updateDialog.copyCommand'), t('main.updateDialog.close')],
       defaultId: 0,
       cancelId: 1,
     });

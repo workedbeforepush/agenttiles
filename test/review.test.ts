@@ -61,7 +61,7 @@ describe('permission suggestions', () => {
     });
     const plan = newRecord('s2', 'C:\\w', 0);
     addPending(plan, 'p2', { tool_name: 'ExitPlanMode', tool_input: { plan: '# Plan\n- a', planFilePath: 'x.md' } }, 1);
-    expect(deriveState(plan)).toMatchObject({ state: 'needsInput', label: 'plan ready' });
+    expect(deriveState(plan)).toMatchObject({ state: 'needsInput', label: 'planReady' });
     expect(toTile(plan, { rename: null, pinned: false, branch: null }).pending?.plan).toBe('# Plan\n- a');
   });
 });
