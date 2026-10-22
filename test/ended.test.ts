@@ -1,10 +1,11 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ENDED_KEEP_MS, addEnded, parseEnded, unexpired } from '../src/core/ended';
 import { applyHookEvent, newRecord } from '../src/core/session';
 import type { EndedTileView, Snapshot } from '../src/core/types';
+import { transcriptPath } from '../src/core/paths';
 
 vi.mock('electron', () => ({}));
 const { ConfigStore } = await import('../src/main/config');
@@ -98,8 +99,17 @@ describe('ended tiles in the store', () => {
   let config: InstanceType<typeof ConfigStore>;
   let store: InstanceType<typeof SessionStore>;
 
-  /** The registry file of this test process: alive, so the store treats it as a running session. */
-  const register = (sessionId: string): void => {
+  /**
+   * The registry file of this test process: alive, so the store treats it as a running session. Its transcript exists
+   * unless `conversation` is false (Claude Code writes it with the first message).
+   */
+  const register = (sessionId: string, conversation = true): void => {
+    if (conversation) {
+      const transcript = transcriptPath(project, sessionId);
+      mkdirSync(dirname(transcript), { recursive: true });
+      writeFileSync(transcript, `${JSON.stringify({ type: 'user', message: { role: 'user', content: 'hi' } })}
+`);
+    }
     writeFileSync(
       registryFile,
       JSON.stringify({ pid: process.pid, sessionId, cwd: project, kind: 'interactive', status: 'idle', startedAt: Date.now() }),
@@ -159,6 +169,15 @@ describe('ended tiles in the store', () => {
     expect(last().ended).toMatchObject([{ sessionId: A, cwd: project, project: 'web-shop', lastPrompt: 'Cover the checkout flow' }]);
     expect(last().header).toMatchObject({ working: 0, waiting: 0, done: 0 });
     expect(new EndedSessions(userData).get(A)?.cwd).toBe(project);
+  });
+
+  it('keeps no ended tile for a session that never got a message: there is nothing to resume', () => {
+    const empty = '99999999-9999-4999-8999-999999999999';
+    register(empty, false);
+    polls(1);
+    end(empty);
+    polls(2);
+    expect(last().ended.map((e) => e.sessionId)).not.toContain(empty);
   });
 
   it('keeps a session whose registry entry is gone for good', () => {

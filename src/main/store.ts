@@ -256,11 +256,16 @@ export class SessionStore {
     this.changed();
   }
 
-  /** Drops a session that ended; `keep` leaves an ended tile, unless the session was hidden or never registered. */
+  /**
+   * Drops a session that ended; `keep` leaves an ended tile, unless the session was hidden, never registered or has
+   * nothing to resume: Claude Code writes the transcript only from the first message on, and `claude --resume` of a
+   * session without one fails with "No conversation found".
+   */
   private remove(sessionId: string, keep: boolean): void {
     const rec = this.records.get(sessionId);
     if (!rec) return;
-    if (keep && this.isVisible(rec)) this.endedSessions.add(this.endedOf(rec));
+    const resumable = rec.transcriptPath !== null && existsSync(rec.transcriptPath);
+    if (keep && resumable && this.isVisible(rec)) this.endedSessions.add(this.endedOf(rec));
     for (const pending of rec.pending) this.release(pending.id);
     this.records.delete(sessionId);
     this.hiddenSessions.delete(sessionId);
