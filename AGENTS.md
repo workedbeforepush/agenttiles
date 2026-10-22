@@ -49,8 +49,37 @@ macOS and Linux are experimental. The README has the feature overview; this file
   `src/core/i18n/en.ts` / `en/<area>.ts`; English is the source, other locales copy its shape. One message per
   sentence with `{placeholders}`, plural objects for counts, code inside a sentence via `WithCode.svelte`. The core
   hands out keys and structured values (`StateLabel`, `Activity`), never English.
-- UI changes: run `npm run screenshots` and commit the updated `docs/images` when a README image changes. The
-  script renders the real UI offscreen with demo data and is also the CI smoke test.
+- `npm run screenshots` renders the real UI offscreen with the demo data from `src/core/demo.ts` into `docs/images`
+  (README images and `demo.gif`); it is also the CI smoke test.
+
+## Definition of done
+
+A change is done when every box that applies is ticked, in the same pull request. "Applies" is decided by what the
+user can see or do differently, not by which files changed.
+
+**Every change**
+- `npm run typecheck` and `npm test` pass; new logic in `src/core` / `src/main` has tests (see Code).
+- The PR title is a conventional commit written for users (see Workflow); the description says what, why and how it
+  was checked, including what was not verified live (OS, terminal, Claude Code version).
+- Nothing can block a Claude Code session: the hook still steps aside when AgentTiles is gone or slow.
+
+**A user-visible feature or behaviour change** (new UI, setting, action, state, platform support)
+- README: the feature list under Features names it; Platform support, Keyboard, FAQ, Privacy and safety and
+  Roadmap match the new behaviour (remove roadmap items that shipped).
+- Demo data: `src/core/demo.ts` (and `scripts/screenshots/` for dialogs) shows the feature wherever a README image
+  could show it, so the images keep up with the app.
+- Images: `npm run screenshots` ran and every image that changed because of the feature is committed, `demo.gif`
+  included. Images that only changed by render noise (clock, timing) are reverted.
+- Texts: every new text goes through `t()` with an English key (see Code); no English is built in the core.
+- Settings: a new setting has a default in `DEFAULT_SETTINGS`, is normalised in `normaliseSettings` (with a test
+  for broken values) and appears on the fitting Settings page with a hint when its effect is not obvious.
+- Tour: when the feature is something a new user should know about, the welcome tour mentions or points at it.
+
+**A new fact about Claude Code or a platform** (hook payloads, registry fields, terminal or OS behaviour)
+- It goes into Known platform behaviour below, verified (say how) or marked as unverified.
+
+**Not part of a feature PR**
+- `CHANGELOG.md`, the version in `package.json` and tags: release-please writes them from the PR titles.
 
 ## Known platform behaviour
 

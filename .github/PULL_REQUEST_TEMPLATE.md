@@ -12,5 +12,5 @@
 
 - [ ] `npm run typecheck` and `npm test` pass
 - [ ] Nothing AgentTiles does can block a Claude Code session (the hook still steps aside when AgentTiles is gone)
-- [ ] UI changes: screenshots attached, and `npm run screenshots` run if README images changed
-- [ ] README.md updated where behaviour changed
+- [ ] User-visible change: README, demo data and `docs/images` (`npm run screenshots`) updated, see the Definition of
+      done in AGENTS.md
