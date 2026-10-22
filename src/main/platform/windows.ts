@@ -286,7 +286,8 @@ while ($null -ne ($line = [Console]::In.ReadLine())) {
  */
 export function openTerminalTab(cwd: string, command: string[], env: NodeJS.ProcessEnv): Promise<boolean> {
   // wt.exe splits its command line at ';' (subcommand separator) unless it is escaped.
-  const escape = (arg: string): string => arg.replace(/;/g, '\\;');
+  // Escape backslashes first so existing escapes cannot alter semicolon escaping.
+  const escape = (arg: string): string => arg.replace(/\\/g, '\\\\').replace(/;/g, '\\;');
   return new Promise((resolve) => {
     const child = spawn('wt.exe', ['-w', '0', 'new-tab', '-d', escape(cwd), ...command.map(escape)], {
       env,
