@@ -100,6 +100,26 @@ describe('state derivation', () => {
     expect(deriveState(rec).state).toBe('compacting');
   });
 
+  it('returns to the state before an idle compaction', () => {
+    const rec = record();
+    applyHookEvent(rec, event('UserPromptSubmit'), 1000);
+    applyHookEvent(rec, event('Stop'), 2000);
+    applyHookEvent(rec, event('PreCompact', { trigger: 'auto' }), 3000);
+    expect(deriveState(rec).state).toBe('compacting');
+    applyHookEvent(rec, event('SessionStart', { source: 'compact' }), 4000);
+    applyHookEvent(rec, event('PostCompact', { trigger: 'auto' }), 4000);
+    expect(deriveState(rec).state).toBe('done');
+  });
+
+  it('keeps working after a compaction inside a turn', () => {
+    const rec = record();
+    applyHookEvent(rec, event('UserPromptSubmit'), 1000);
+    applyHookEvent(rec, event('PreCompact', { trigger: 'auto' }), 2000);
+    applyHookEvent(rec, event('PostCompact', { trigger: 'auto' }), 3000);
+    applyHookEvent(rec, event('SessionStart', { source: 'compact' }), 3000);
+    expect(deriveState(rec).state).toBe('working');
+  });
+
   it('counts subagents and tasks', () => {
     const rec = record();
     applyHookEvent(rec, event('SubagentStart', { agent_id: 'a' }), 1);

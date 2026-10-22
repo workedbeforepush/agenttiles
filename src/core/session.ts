@@ -56,6 +56,8 @@ export interface SessionRecord {
   transcript: TranscriptInfo;
   hooks: boolean;
   hookState: HookState | null;
+  /** The hook state when a compaction started; restored when it ends outside a turn (idle compaction, /compact). */
+  beforeCompact: HookState | null;
   /** Running subagents: agent id -> agent type. */
   subagents: Map<string, string>;
   /** Tasks of the session: task id -> subject and completion. */
@@ -82,6 +84,7 @@ export function newRecord(sessionId: string, cwd: string, now: number): SessionR
     transcript: emptyTranscriptInfo(),
     hooks: false,
     hookState: null,
+    beforeCompact: null,
     subagents: new Map(),
     tasks: new Map(),
     pending: [],
@@ -178,7 +181,8 @@ export function applyHookEvent(rec: SessionRecord, input: HookInput, now: number
   const toolName = s(input, 'tool_name') ?? '';
   switch (event) {
     case 'SessionStart':
-      setHook(rec, now, 'idle', null, null);
+      // After a compaction Claude Code starts the session again (source "compact"); PostCompact sets that state.
+      if (s(input, 'source') !== 'compact') setHook(rec, now, 'idle', null, null);
       break;
     case 'SessionEnd':
       effects.ended = true;
@@ -271,11 +275,18 @@ export function applyHookEvent(rec: SessionRecord, input: HookInput, now: number
       break;
     }
     case 'PreCompact':
+      rec.beforeCompact = rec.hookState?.state === 'compacting' ? rec.beforeCompact : rec.hookState;
       setHook(rec, now, 'compacting', null, null);
       break;
-    case 'PostCompact':
-      setHook(rec, now, 'working', null, null);
+    case 'PostCompact': {
+      // Inside a turn Claude carries on; outside one (idle compaction, /compact) the session is where it was before.
+      const before = rec.beforeCompact;
+      rec.beforeCompact = null;
+      if (rec.turnStartedAt !== null) setHook(rec, now, 'working', null, null);
+      else if (before) setHook(rec, now, before.state, before.activity, before.label, before.sticky);
+      else setHook(rec, now, 'idle', null, null);
       break;
+    }
     case 'MessageDisplay': {
       const id = s(input, 'message_id') ?? '';
       const delta = typeof input['delta'] === 'string' ? input['delta'] : '';
