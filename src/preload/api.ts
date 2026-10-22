@@ -51,7 +51,8 @@ export interface AgentTilesApi {
   /** Recent project folders and ended sessions, for starting or resuming a session. */
   recentSessions(): Promise<LaunchView>;
   /** Opens `claude` (or `claude --resume <id>`) in a new terminal tab; resolves an error message or null. */
-  launchSession(cwd: string, sessionId: string | null): Promise<string | null>;
+  /** `worktree`: null for the folder itself, '' or a name for a new git worktree (new sessions only). */
+  launchSession(cwd: string, sessionId: string | null, worktree: string | null): Promise<string | null>;
   /** Folder picker; null when cancelled. */
   pickFolder(): Promise<string | null>;
   getUpdate(): Promise<UpdateView>;

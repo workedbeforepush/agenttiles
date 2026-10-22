@@ -5,7 +5,7 @@ import { firstJsonObject, isRegistryFileName, parseRegistryEntry } from '../src/
 import { applyTranscriptLine, emptyTranscriptInfo } from '../src/core/transcript';
 import { LineSplitter, permissionOutput } from '../src/core/protocol';
 import { projectName, projectSlug } from '../src/core/paths';
-import { attachCommand } from '../src/main/launcher';
+import { attachCommand, launchCommand } from '../src/main/launcher';
 import { toolSummary } from '../src/core/tools';
 
 const fixtures = join(__dirname, 'fixtures', '2.1.306');
@@ -137,5 +137,26 @@ describe('background sessions', () => {
 
   it('rejects anything that is not a job id', () => {
     expect(() => attachCommand('4490bb57 & calc')).toThrow('Invalid background session id.');
+  });
+});
+
+describe('launch command', () => {
+  const id = '11111111-2222-3333-4444-555555555555';
+
+  it('starts, resumes or starts in a new worktree', () => {
+    expect(launchCommand(null, null)).toEqual(['claude']);
+    expect(launchCommand(id, null)).toEqual(['claude', '--resume', id]);
+    expect(launchCommand(null, '')).toEqual(['claude', '--worktree']);
+    expect(launchCommand(null, 'fix/login-42')).toEqual(['claude', '--worktree', 'fix/login-42']);
+  });
+
+  it('resumes in place, never in a worktree', () => {
+    expect(launchCommand(id, 'other')).toEqual(['claude', '--resume', id]);
+  });
+
+  it('rejects worktree names that are not a plain name', () => {
+    expect(() => launchCommand(null, '--dangerously-skip-permissions')).toThrow('Not a valid worktree name');
+    expect(() => launchCommand(null, 'a b')).toThrow('Not a valid worktree name');
+    expect(() => launchCommand(null, 'x;calc')).toThrow('Not a valid worktree name');
   });
 });
