@@ -219,6 +219,7 @@ export interface LaunchView {
 }
 
 export type ThemeSetting = 'system' | 'dark' | 'light';
+export type TerminalTarget = 'tab' | 'window';
 export type ViewMode = 'tiles' | 'list';
 export type TileSize = 'S' | 'M' | 'L';
 /** In-app keyboard shortcuts (the question dialog keeps its own fixed keys). */
@@ -259,6 +260,8 @@ export interface Settings {
   groupByProject: boolean;
   /** UI language: the system's (when AgentTiles ships it) or a fixed one. */
   language: LanguageSetting;
+  /** Where new and attached sessions open: a tab in the current terminal window, or a new window. */
+  terminalTarget: TerminalTarget;
 }
 
 /** A settings change; nested keys and sounds are merged per entry, so two quick edits cannot undo each other. */

@@ -1,6 +1,7 @@
 import { delimiter } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ancestors, mergePath, parsePs, parseShellPath } from '../src/main/platform/unix';
+import { wtArgs } from '../src/main/platform/wt';
 import { appBundleOf, appleString, hostApp, openScript, selectTabScript, shellQuote, terminalOf } from '../src/main/platform/mac';
 import { LINUX_TERMINALS, desktopEntry } from '../src/main/platform/linux';
 
@@ -64,9 +65,10 @@ describe('macOS', () => {
   it('builds the tab selection and open scripts', () => {
     expect(selectTabScript('Terminal', '/dev/ttys003')).toContain('if tty of t is "/dev/ttys003" then');
     expect(selectTabScript('iTerm2', '/dev/ttys003')).toContain('repeat with s in sessions of t');
-    const open = openScript('Terminal', '/Users/me/my "app"', ['claude', '--resume', 'abc']);
+    const open = openScript('Terminal', '/Users/me/my "app"', ['claude', '--resume', 'abc'], 'tab');
     expect(open).toContain(`do script "cd '/Users/me/my \\"app\\"' && 'claude' '--resume' 'abc'"`);
-    expect(openScript('iTerm2', '/tmp', ['claude'])).toContain('create tab with default profile');
+    expect(openScript('iTerm2', '/tmp', ['claude'], 'tab')).toContain('if (count of windows) is 0 then');
+    expect(openScript('iTerm2', '/tmp', ['claude'], 'window')).toContain('if true then');
   });
 });
 
@@ -82,5 +84,21 @@ describe('Linux', () => {
     const entry = desktopEntry(['/opt/agenttiles/agenttiles', '/home/me/my apps/agenttiles']);
     expect(entry).toContain('Exec=/opt/agenttiles/agenttiles "/home/me/my apps/agenttiles"');
     expect(entry).toContain('Type=Application');
+  });
+});
+
+describe('Windows Terminal', () => {
+  it('opens a tab in the last window or a new window, escaping the subcommand separator', () => {
+    expect(wtArgs('C:/dev/a;b', ['claude', '--resume', 'x'], 'tab')).toEqual([
+      '-w',
+      '0',
+      'new-tab',
+      '-d',
+      'C:/dev/a\\;b',
+      'claude',
+      '--resume',
+      'x',
+    ]);
+    expect(wtArgs('C:/dev', ['claude'], 'window').slice(0, 3)).toEqual(['-w', 'new', 'new-tab']);
   });
 });

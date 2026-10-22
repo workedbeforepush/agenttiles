@@ -1,6 +1,7 @@
 // macOS: jump to the session's tab in Terminal.app or iTerm2 (AppleScript), bring other host apps to the front,
 // and open new sessions in iTerm2 (when it runs) or Terminal.app.
 import { existsSync } from 'node:fs';
+import type { TerminalTarget } from '../../core/types';
 import { ancestors, processTable, run, ttyOf, type UnixProcess } from './unix';
 
 export type MacTerminal = 'Terminal' | 'iTerm2';
@@ -75,8 +76,11 @@ export function selectTabScript(terminal: MacTerminal, tty: string): string {
   ].join('\n');
 }
 
-/** AppleScript that opens a new tab (or window) running `command` in `cwd`. */
-export function openScript(terminal: MacTerminal, cwd: string, command: string[]): string {
+/**
+ * AppleScript that runs `command` in `cwd`: iTerm2 opens a tab in its current window or a new window; Terminal.app's
+ * `do script` always opens a window (a tab there would need keystrokes through System Events).
+ */
+export function openScript(terminal: MacTerminal, cwd: string, command: string[], target: TerminalTarget): string {
   const line = appleString(`cd ${shellQuote(cwd)} && ${command.map(shellQuote).join(' ')}`);
   if (terminal === 'Terminal') {
     return ['tell application "Terminal"', '  activate', `  do script ${line}`, 'end tell'].join('\n');
@@ -84,7 +88,7 @@ export function openScript(terminal: MacTerminal, cwd: string, command: string[]
   return [
     'tell application "iTerm2"',
     '  activate',
-    '  if (count of windows) is 0 then',
+    `  if ${target === 'window' ? 'true' : '(count of windows) is 0'} then`,
     '    set w to (create window with default profile)',
     '  else',
     '    set w to current window',
@@ -122,9 +126,9 @@ async function preferredTerminal(): Promise<MacTerminal> {
   return running || existsSync('/Applications/iTerm.app') ? 'iTerm2' : 'Terminal';
 }
 
-export async function openTerminalTab(cwd: string, command: string[]): Promise<boolean> {
+export async function openTerminalTab(cwd: string, command: string[], target: TerminalTarget): Promise<boolean> {
   try {
-    await run('osascript', ['-e', openScript(await preferredTerminal(), cwd, command)], 15_000);
+    await run('osascript', ['-e', openScript(await preferredTerminal(), cwd, command, target)], 15_000);
     return true;
   } catch {
     return false;

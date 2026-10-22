@@ -2,7 +2,17 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse, stringify } from 'smol-toml';
-import type { KeyAction, KeyBinding, LogLevel, Settings, SoundState, ThemeSetting, TileSize, ViewMode } from '../core/types';
+import type {
+  KeyAction,
+  KeyBinding,
+  LogLevel,
+  Settings,
+  SoundState,
+  TerminalTarget,
+  ThemeSetting,
+  TileSize,
+  ViewMode,
+} from '../core/types';
 import { isLocale } from '../core/i18n';
 
 export interface WindowBounds {
@@ -54,12 +64,14 @@ export const DEFAULT_SETTINGS: Settings = {
   tileSize: 'M',
   groupByProject: false,
   language: 'system',
+  terminalTarget: 'tab',
 };
 
 const THEMES: ThemeSetting[] = ['system', 'dark', 'light'];
 const LEVELS: LogLevel[] = ['error', 'warn', 'info', 'debug'];
 const VIEW_MODES: ViewMode[] = ['tiles', 'list'];
 const TILE_SIZES: TileSize[] = ['S', 'M', 'L'];
+const TERMINAL_TARGETS: TerminalTarget[] = ['tab', 'window'];
 
 function bool(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback;
@@ -122,6 +134,9 @@ export function normaliseSettings(raw: Record<string, unknown>): Settings {
     tileSize: TILE_SIZES.includes(raw['tileSize'] as TileSize) ? (raw['tileSize'] as TileSize) : d.tileSize,
     groupByProject: bool(raw['groupByProject'], d.groupByProject),
     language: raw['language'] === 'system' || isLocale(raw['language']) ? raw['language'] : d.language,
+    terminalTarget: TERMINAL_TARGETS.includes(raw['terminalTarget'] as TerminalTarget)
+      ? (raw['terminalTarget'] as TerminalTarget)
+      : d.terminalTarget,
   };
 }
 

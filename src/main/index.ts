@@ -35,7 +35,7 @@ import { initLog, log, setLogLevel } from './log';
 import { Notifier } from './notifier';
 import { Attention } from './attention';
 import { attachSession, launchSession, recentSessions, stopSession } from './launcher';
-import { focusSession, initPlatform, registerAppIdentity, setLinuxAutostart } from './platform';
+import { focusSession, initPlatform, registerAppIdentity, setLinuxAutostart, setTerminalTarget } from './platform';
 import { APP_ID, APP_NAME, persistentIcons } from './appId';
 import { SessionStore } from './store';
 import { Updater } from './updater';
@@ -213,6 +213,7 @@ async function start(): Promise<void> {
       tray.updateMenu();
     }
     win.setAlwaysOnTop(s.alwaysOnTop);
+    setTerminalTarget(s.terminalTarget);
     setLogLevel(s.logLevel);
     if (process.platform === 'linux') {
       // --no-sandbox like the agenttiles command: npm installs cannot set up Chromium's SUID sandbox helper.
