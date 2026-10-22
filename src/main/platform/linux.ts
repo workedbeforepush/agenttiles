@@ -1,10 +1,11 @@
-// Linux: bring the session's terminal window to the front (X11 via xdotool), open new sessions in the first
-// installed terminal, and start with the desktop session through an XDG autostart entry.
+// Linux: select the session's pane in tmux, WezTerm or kitty, bring its terminal window to the front (X11 via
+// xdotool), open new sessions in the first installed terminal, and start with the desktop session through an XDG
+// autostart entry.
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { ancestors, onPath, processTable, run } from './unix';
+import { ancestors, onPath, processTable, run, selectTerminalPane, sessionTerminal } from './unix';
 
 export type LinuxFocus = 'focused' | 'notFound' | 'noX11' | 'noXdotool';
 
@@ -52,14 +53,18 @@ async function windowsOf(pid: number): Promise<string[]> {
 }
 
 /**
- * Brings the window hosting the session to the front: the nearest ancestor process (terminal, terminal server or
- * IDE) that owns a window. Among several windows of that process the one whose title contains the session title
- * wins. Wayland compositors do not let other apps raise windows, so this needs X11 (or XWayland) and xdotool.
+ * Shows the session's pane (tmux, WezTerm, kitty) and brings the window hosting it to the front: the nearest ancestor
+ * process (terminal, terminal server or IDE) that owns a window; for a session in tmux, the terminal of the tmux
+ * client used last. Among several windows of that process the one whose title contains the session title wins.
+ * Wayland compositors do not let other apps raise windows, so raising needs X11 (or XWayland) and xdotool.
  */
 export async function focusSession(pid: number, titles: string[]): Promise<LinuxFocus> {
+  const shown = await sessionTerminal(pid);
+  const chain = ancestors(shown.pid, await processTable());
+  await selectTerminalPane(shown, chain).catch(() => undefined);
   if (!process.env['DISPLAY']) return 'noX11';
   if (!onPath('xdotool')) return 'noXdotool';
-  for (const ancestor of ancestors(pid, await processTable()).slice(1)) {
+  for (const ancestor of chain.slice(1)) {
     const windows = await windowsOf(ancestor.pid);
     if (windows.length === 0) continue;
     let target = windows[0]!;

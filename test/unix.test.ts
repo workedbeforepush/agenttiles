@@ -6,6 +6,9 @@ import { SHELL_PATH_COMMAND, ancestors, mergePath, onPath, parseLstart, parsePs,
 import { wtArgs } from '../src/main/platform/wt';
 import { appBundleOf, appleString, hostApp, openScript, selectTabScript, shellQuote, terminalOf } from '../src/main/platform/mac';
 import { LINUX_TERMINALS, desktopEntry, execValue } from '../src/main/platform/linux';
+import { findWezTermPane, parseWezTermPanes, siblingExecutable, titleMatches, weztermActivateArgs } from '../src/main/platform/wezterm';
+import { TMUX_CLIENTS_ARGS, TMUX_PANES_ARGS, parseTmuxClients, parseTmuxPanes, pickTmuxClient, tmuxSwitchArgs } from '../src/main/platform/tmux';
+import { environmentValue, kittyFocusArgs } from '../src/main/platform/kitty';
 
 // Shapes of `ps -axo pid=,ppid=,comm=` on macOS (full paths, with spaces) and Linux (names).
 const MAC_PS = `
@@ -157,5 +160,76 @@ describe('Windows Terminal', () => {
     expect(wtArgs('\\\\server\\share\\proj', ['claude'], 'tab')[4]).toBe('\\\\server\\share\\proj');
     expect(wtArgs('C:\\dev\\a;b', ['claude'], 'tab')[4]).toBe('C:\\dev\\a\\;b');
     expect(wtArgs('C:\\dev\\;x', ['claude'], 'tab')[4]).toBe('C:\\dev\\\\;x');
+  });
+});
+
+// Shape of `wezterm cli list --format json` (fields AgentTiles does not read left out).
+const WEZTERM_LIST = JSON.stringify([
+  { window_id: 0, tab_id: 0, pane_id: 0, title: 'zsh', window_title: '[1/2] zsh', tty_name: '/dev/ttys001' },
+  { window_id: 0, tab_id: 1, pane_id: 3, title: '✳ Fix the login', window_title: '[1/2] zsh', tty_name: '/dev/ttys004' },
+  { window_id: 1, tab_id: 2, pane_id: 5, title: '⠂ Write the docs', window_title: '⠂ Write the docs', tty_name: null },
+]);
+
+describe('WezTerm', () => {
+  const panes = parseWezTermPanes(WEZTERM_LIST);
+
+  it('reads the panes of `wezterm cli list`', () => {
+    expect(panes[1]).toEqual({ paneId: 3, title: '✳ Fix the login', windowTitle: '[1/2] zsh', tty: '/dev/ttys004' });
+    expect(panes[2]?.tty).toBeNull();
+    expect(() => parseWezTermPanes('{}')).toThrow('did not return a list');
+  });
+
+  it('finds the pane by tty where WezTerm knows it, by title otherwise', () => {
+    expect(findWezTermPane(panes, '/dev/ttys004', [])?.paneId).toBe(3);
+    expect(findWezTermPane(panes, '/dev/ttys009', ['Fix the login'])).toBeNull();
+    expect(findWezTermPane(panes, null, ['Write the docs'])?.paneId).toBe(5);
+    expect(findWezTermPane(panes, null, ['Write'])).toBeNull();
+  });
+
+  it('matches titles with and without the spinner prefix only', () => {
+    expect(titleMatches('Fix', ['Fix'])).toBe(true);
+    expect(titleMatches('✳ Fix', ['Fix'])).toBe(true);
+    expect(titleMatches('Prefix', ['Fix'])).toBe(false);
+  });
+
+  it('runs the CLI installed next to the GUI', () => {
+    expect(weztermActivateArgs(3)).toEqual(['cli', 'activate-pane', '--pane-id', '3']);
+    expect(siblingExecutable(String.raw`C:\Program Files\WezTerm\wezterm-gui.exe`, 'wezterm.exe')).toBe(String.raw`C:\Program Files\WezTerm\wezterm.exe`);
+    expect(siblingExecutable('/Applications/WezTerm.app/Contents/MacOS/wezterm-gui', 'wezterm')).toBe('/Applications/WezTerm.app/Contents/MacOS/wezterm');
+    expect(siblingExecutable('wezterm-gui', 'wezterm')).toBe('wezterm');
+  });
+});
+
+describe('tmux', () => {
+  const panes = parseTmuxPanes('/dev/pts/3 %0 work\n/dev/pts/5 %4 my  notes\n\n');
+  const clients = parseTmuxClients('/dev/pts/1 900 1792000100 work\n/dev/pts/2 901 1792000200 other\n');
+
+  it('asks for the session name last, as it can have spaces', () => {
+    expect(TMUX_PANES_ARGS).toEqual(['list-panes', '-a', '-F', '#{pane_tty} #{pane_id} #{session_name}']);
+    expect(TMUX_CLIENTS_ARGS[2]).toBe('#{client_tty} #{client_pid} #{client_activity} #{client_session}');
+    expect(panes).toEqual([
+      { tty: '/dev/pts/3', paneId: '%0', session: 'work' },
+      { tty: '/dev/pts/5', paneId: '%4', session: 'my  notes' },
+    ]);
+    expect(clients[0]).toEqual({ tty: '/dev/pts/1', pid: 900, activity: 1792000100, session: 'work' });
+  });
+
+  it('shows the pane in the latest client on its session, else in the latest client', () => {
+    expect(pickTmuxClient(clients, panes[0]!)?.pid).toBe(900);
+    expect(pickTmuxClient(clients, panes[1]!)?.pid).toBe(901);
+    expect(pickTmuxClient([], panes[0]!)).toBeNull();
+    expect(tmuxSwitchArgs(clients[0]!, panes[1]!)).toEqual(['switch-client', '-c', '/dev/pts/1', '-t', '%4']);
+  });
+});
+
+describe('kitty', () => {
+  it('reads the remote control address from either environment format', () => {
+    expect(environmentValue('SHELL=/bin/zsh\0KITTY_LISTEN_ON=unix:/tmp/kitty-812\0KITTY_WINDOW_ID=2\0', 'KITTY_LISTEN_ON')).toBe('unix:/tmp/kitty-812');
+    expect(environmentValue('-zsh TERM=xterm-kitty KITTY_LISTEN_ON=unix:/tmp/kitty-812 HOME=/Users/me\n', 'KITTY_LISTEN_ON')).toBe('unix:/tmp/kitty-812');
+    expect(environmentValue('SHELL=/bin/zsh\0MY_KITTY_LISTEN_ON=x\0KITTY_LISTEN_ON=\0', 'KITTY_LISTEN_ON')).toBeNull();
+  });
+
+  it('focuses the window by the process kitty started in it', () => {
+    expect(kittyFocusArgs('unix:/tmp/kitty-812', 4711)).toEqual(['@', '--to', 'unix:/tmp/kitty-812', 'focus-window', '--match', 'pid:4711']);
   });
 });

@@ -1,7 +1,11 @@
-// Shared helpers for macOS and Linux: the process table via `ps`, and the PATH of the user's login shell.
+// Shared helpers for macOS and Linux: the process table via `ps`, the PATH of the user's login shell, and pane
+// selection in tmux, WezTerm and kitty.
 import { execFile, execFileSync } from 'node:child_process';
-import { statSync } from 'node:fs';
-import { delimiter, join } from 'node:path';
+import { readFileSync, readlinkSync, statSync } from 'node:fs';
+import { basename, delimiter, join } from 'node:path';
+import { environmentValue, kittyFocusArgs } from './kitty';
+import { TMUX_CLIENTS_ARGS, TMUX_PANES_ARGS, parseTmuxClients, parseTmuxPanes, pickTmuxClient, tmuxSwitchArgs } from './tmux';
+import { WEZTERM_LIST_ARGS, findWezTermPane, parseWezTermPanes, siblingExecutable, weztermActivateArgs } from './wezterm';
 
 export interface UnixProcess {
   pid: number;
@@ -127,5 +131,80 @@ export async function adoptLoginShellPath(): Promise<void> {
     if (path) process.env['PATH'] = mergePath(process.env['PATH'] ?? '', path);
   } catch {
     // Keep the inherited PATH; the doctor shows when node or claude are missing.
+  }
+}
+
+// ---- tabs and panes -----------------------------------------------------------------------------------
+
+/** A process shown in a terminal tab or pane, with its controlling terminal. */
+export interface TerminalProcess {
+  pid: number;
+  tty: string | null;
+}
+
+/**
+ * tmux: when `tty` is a tmux pane, shows that pane in the most recently used client and returns the client, whose
+ * terminal then hosts the session. Null when the tty is no pane of the default tmux server or no client is attached.
+ */
+async function showTmuxPane(tty: string): Promise<TerminalProcess | null> {
+  if (!onPath('tmux')) return null;
+  // Fails when no tmux server runs.
+  const pane = parseTmuxPanes(await run('tmux', TMUX_PANES_ARGS).catch(() => '')).find((p) => p.tty === tty);
+  if (!pane) return null;
+  const client = pickTmuxClient(parseTmuxClients(await run('tmux', TMUX_CLIENTS_ARGS)), pane);
+  if (!client) return null;
+  await run('tmux', tmuxSwitchArgs(client, pane));
+  return { pid: client.pid, tty: client.tty };
+}
+
+/** The process whose terminal shows the session: a tmux client switched to the session's pane, or the session. */
+export async function sessionTerminal(pid: number): Promise<TerminalProcess> {
+  const tty = await ttyOf(pid).catch(() => null);
+  const client = tty ? await showTmuxPane(tty).catch(() => null) : null;
+  return client ?? { pid, tty };
+}
+
+/** The program file of a process: macOS `comm` is the full path, Linux `comm` only the name. */
+function executableOf(proc: UnixProcess): string {
+  return process.platform === 'linux' ? readlinkSync(`/proc/${proc.pid}/exe`) : proc.comm;
+}
+
+async function environmentOf(pid: number): Promise<string> {
+  if (process.platform === 'linux') return readFileSync(`/proc/${pid}/environ`, 'utf8');
+  return run('ps', ['-E', '-ww', '-o', 'command=', '-p', String(pid)]);
+}
+
+async function selectWezTermPane(gui: UnixProcess, tty: string): Promise<void> {
+  const cli = siblingExecutable(executableOf(gui), 'wezterm');
+  const pane = findWezTermPane(parseWezTermPanes(await run(cli, WEZTERM_LIST_ARGS)), tty, []);
+  if (pane) await run(cli, weztermActivateArgs(pane.paneId));
+}
+
+/**
+ * kitty answers only with remote control on a socket (`allow_remote_control` and `listen_on` in kitty.conf), whose
+ * address it hands its windows in KITTY_LISTEN_ON. Without it the window only comes to the front.
+ */
+async function focusKittyWindow(kitty: UnixProcess, child: UnixProcess): Promise<void> {
+  const address = environmentValue(await environmentOf(child.pid), 'KITTY_LISTEN_ON');
+  if (!address) return;
+  await run(siblingExecutable(executableOf(kitty), 'kitty'), kittyFocusArgs(address, child.pid));
+}
+
+/**
+ * Selects the tab and pane of `target` when WezTerm or kitty hosts it (`chain`: its ancestors, nearest first).
+ * Raising the terminal window is the caller's job.
+ */
+export async function selectTerminalPane(target: TerminalProcess, chain: UnixProcess[]): Promise<void> {
+  for (const [index, proc] of chain.entries()) {
+    const name = basename(proc.comm);
+    if (name === 'wezterm-gui') {
+      if (target.tty) await selectWezTermPane(proc, target.tty);
+      return;
+    }
+    const child = chain[index - 1];
+    if (name === 'kitty' && child) {
+      await focusKittyWindow(proc, child);
+      return;
+    }
   }
 }

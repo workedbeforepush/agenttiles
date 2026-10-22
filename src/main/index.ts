@@ -167,7 +167,7 @@ async function start(): Promise<void> {
       reg.name && reg.nameSource !== 'derived' ? reg.name : null,
       rec.transcript.aiTitle,
     ].filter((t): t is string => t !== null);
-    const result = await focusSession(rec.sessionId, reg.pid, titles);
+    const result = await focusSession(rec.sessionId, reg.pid, rec.cwd, titles);
     if (result === 'unsupported') notifier.info('AgentTiles', t('main.focus.unsupported'));
     else if (result === 'noX11') notifier.info('AgentTiles', t('main.focus.noX11'));
     else if (result === 'noXdotool') notifier.info('AgentTiles', t('main.focus.noXdotool'));
