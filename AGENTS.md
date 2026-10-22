@@ -28,6 +28,8 @@ macOS and Linux are experimental. The README has the feature overview; this file
   everything that ships no user-visible change.
 - release-please owns `package.json`'s version, `CHANGELOG.md` and the tags; changes there come from its release PR.
 - Plans, drafts and notes for the maintainer go into `private/` (git-ignored as a whole).
+- Extra git worktrees for parallel work go under `.claude/worktrees/<name>` (git-ignored), never elsewhere in or
+  next to the repository, so `git add` cannot pick them up.
 - Commit messages and PR descriptions describe the change only, without tool or AI attribution.
 
 ## Code
