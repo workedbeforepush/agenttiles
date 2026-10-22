@@ -29,6 +29,42 @@ jobs:
           # the required CI checks would never run on the release pull request and main's protection would block it.
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
 
+  # release-please writes the notes from the PR titles only, so pull requests from outside the project would ship
+  # without a word about who made them. This job appends a thanks line per outside pull request to the GitHub release
+  # (the page the app's update note links to).
+  thank-contributors:
+    name: Thank outside contributors
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          OWNER: ${{ github.repository_owner }}
+          TAG: ${{ needs.release-please.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+          previous=$(gh api "repos/$GH_REPO/releases" --jq '.[1].tag_name')
+          # Pull requests are squash-merged: the commit author is the pull request author, the subject ends in (#123).
+          thanks=$(gh api "repos/$GH_REPO/compare/$previous...$TAG" \
+            --jq '.commits[] | select(.author.login != null) | "\(.author.login)\t\(.commit.message | split("\n")[0])"' |
+            while IFS=$'\t' read -r login subject; do
+              if [ "$login" = "$OWNER" ] || [[ "$login" == *'[bot]' ]]; then continue; fi
+              pr=$(sed -n 's/.*(\(#[0-9]*\))$/\1/p' <<<"$subject")
+              earlier=$(gh api "repos/$GH_REPO/commits?sha=$previous&author=$login&per_page=1" --jq length)
+              if [ "$earlier" = 0 ]; then
+                echo "* @$login for $pr, their first contribution"
+              else
+                echo "* @$login for $pr"
+              fi
+            done)
+          if [ -z "$thanks" ]; then exit 0; fi
+          { gh release view "$TAG" --json body --jq .body; printf '\n### Thanks\n\n%s\n' "$thanks"; } > notes.md
+          gh release edit "$TAG" --notes-file notes.md
+
   publish:
     name: Publish to npm
     needs: release-please

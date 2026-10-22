@@ -10,6 +10,10 @@ by release-please from the pull request titles (conventional commits).
 
 * focus sessions that Windows handed to the default terminal ([#39](https://github.com/workedbeforepush/agenttiles/issues/39)) ([a816ad8](https://github.com/workedbeforepush/agenttiles/commit/a816ad83f730ae592797b00ca9077d6853223747))
 
+### Thanks
+
+* [@Janik135](https://github.com/Janik135) for [#39](https://github.com/workedbeforepush/agenttiles/pull/39), their first contribution
+
 ## [0.6.0](https://github.com/workedbeforepush/agenttiles/compare/v0.5.0...v0.6.0) (2026-10-22)
 
 
