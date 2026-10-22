@@ -367,6 +367,17 @@ export function snapshot(now: number, progress: DemoProgress = { approved: false
   ];
   return {
     tiles,
+    ended: [
+      {
+        sessionId: 'i9',
+        cwd: 'C:\\dev\\web-shop',
+        project: 'web-shop',
+        name: 'Product page performance',
+        endedAt: now - 42 * MIN,
+        lastPrompt: 'The product page takes 4 seconds to load on mobile. Make it fast.',
+        lastAssistant: 'Largest contentful paint is down from 4.1 s to 1.3 s: images are lazy-loaded and resized, and the reviews widget loads after the page.',
+      },
+    ],
     header: {
       ...countStates(tiles.map((t) => t.state)),
       fiveHour: { usedPct: 62, resetsAt: Math.round((now + 112 * MIN) / 1000), observedAt: now - MIN },

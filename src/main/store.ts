@@ -13,7 +13,17 @@ import {
 import { open } from 'node:fs/promises';
 import { join } from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
-import type { DecisionRequest, HeaderView, ProjectDay, RateLimit, SessionState, Snapshot, StatsView, TileView } from '../core/types';
+import type {
+  DecisionRequest,
+  EndedTileView,
+  HeaderView,
+  ProjectDay,
+  RateLimit,
+  SessionState,
+  Snapshot,
+  StatsView,
+  TileView,
+} from '../core/types';
 import { toolDiff } from '../core/diff';
 import { isRegistryFileName, parseRegistryEntry, type RegistryEntry } from '../core/registry';
 import { applyTranscriptLine, emptyTranscriptInfo } from '../core/transcript';
@@ -26,9 +36,12 @@ import {
   newRecord,
   refreshView,
   removePending,
+  tileName,
   toTile,
   type SessionRecord,
 } from '../core/session';
+import { ENDED_TEXT_MAX } from '../core/ended';
+import { clipText } from '../core/tools';
 import type { DecisionExtras, PermissionDecision } from '../core/protocol';
 import { addSample, limitEta, type UsageSample } from '../core/forecast';
 import { countStates } from '../core/counters';
@@ -39,6 +52,7 @@ import { dateOf, type DailyStats } from './daily';
 import type { UsageLog } from './usage';
 import { projectCost } from '../core/usage';
 import type { LimitsCache } from './limits';
+import type { EndedSessions } from './ended';
 import { log } from './log';
 import { readGitBranch } from './git';
 
@@ -115,6 +129,7 @@ export class SessionStore {
     private readonly daily: DailyStats,
     private readonly usage: UsageLog,
     private readonly limitsCache: LimitsCache,
+    private readonly endedSessions: EndedSessions,
     private readonly reply: (id: string, decision: PermissionDecision, extras?: DecisionExtras) => boolean,
     private readonly listener: StoreListener,
   ) {
@@ -213,6 +228,8 @@ export class SessionStore {
           this.records.set(entry.sessionId, rec);
           log.info(`session discovered ${entry.sessionId} pid ${entry.pid} ${entry.cwd}`);
         }
+        // A resumed session runs under its old id: its live tile takes the place of the ended one.
+        this.endedSessions.remove(entry.sessionId);
         // The registry holds the session's project folder. A `cd` in the Bash tool (CwdChanged) is not the project.
         rec.cwd = entry.cwd;
         rec.registry = entry;
@@ -222,12 +239,14 @@ export class SessionStore {
       for (const [id, rec] of [...this.records]) {
         if (live.has(id)) continue;
         if (rec.registry === null) {
-          if (now - rec.firstSeen > HOOK_ONLY_TTL_MS) this.remove(id);
+          if (now - rec.firstSeen > HOOK_ONLY_TTL_MS) this.remove(id, false);
           continue;
         }
         const missed = (this.misses.get(id) ?? 0) + 1;
         this.misses.set(id, missed);
-        if (missed >= MISSES_BEFORE_REMOVE) this.remove(id);
+        // A process that goes on under another session id (/clear without hooks) is still on the dashboard: no ended tile.
+        const pid = rec.registry.pid;
+        if (missed >= MISSES_BEFORE_REMOVE) this.remove(id, !entries.some((e) => e.pid === pid));
       }
 
       for (const rec of this.records.values()) this.tail(rec);
@@ -237,9 +256,11 @@ export class SessionStore {
     this.changed();
   }
 
-  private remove(sessionId: string): void {
+  /** Drops a session that ended; `keep` leaves an ended tile, unless the session was hidden or never registered. */
+  private remove(sessionId: string, keep: boolean): void {
     const rec = this.records.get(sessionId);
     if (!rec) return;
+    if (keep && this.isVisible(rec)) this.endedSessions.add(this.endedOf(rec));
     for (const pending of rec.pending) this.release(pending.id);
     this.records.delete(sessionId);
     this.hiddenSessions.delete(sessionId);
@@ -410,7 +431,7 @@ export class SessionStore {
     if (effects.configChanged) this.listener.configChanged();
     if (effects.ended) {
       this.ended.add(rec.sessionId);
-      this.remove(rec.sessionId);
+      this.remove(rec.sessionId, !effects.cleared);
     } else {
       this.tail(rec);
     }
@@ -576,10 +597,19 @@ export class SessionStore {
     return this.records.get(sessionId);
   }
 
-  /** Drops pins, order and renames of sessions that no longer exist. */
+  endedSession(sessionId: string): EndedTileView | undefined {
+    return this.endedSessions.get(sessionId);
+  }
+
+  /** Removes an ended tile (its ✕). */
+  removeEnded(sessionId: string): void {
+    if (this.endedSessions.remove(sessionId)) this.changed();
+  }
+
+  /** Drops pins, order and renames of sessions that no longer exist; an ended tile keeps them for its resume. */
   pruneConfig(): void {
     const c = this.config.config;
-    const live = new Set(this.records.keys());
+    const live = new Set([...this.records.keys(), ...this.endedSessions.ids()]);
     const pins = c.pins.filter((id) => live.has(id));
     const order = c.order.filter((id) => live.has(id));
     const renames = Object.fromEntries(Object.entries(c.renames).filter(([id]) => live.has(id)));
@@ -618,11 +648,28 @@ export class SessionStore {
     });
   }
 
+  /** What an ended tile keeps of a session: enough to show, resume and fork it. */
+  private endedOf(rec: SessionRecord): EndedTileView {
+    const lastAssistant = rec.hookAssistant ?? rec.transcript.lastAssistant;
+    return {
+      sessionId: rec.sessionId,
+      cwd: rec.cwd,
+      project: projectName(rec.cwd),
+      name: tileName(rec, this.config.config.renames[rec.sessionId] ?? null),
+      endedAt: Date.now(),
+      lastPrompt: rec.transcript.lastPrompt ? clipText(rec.transcript.lastPrompt, ENDED_TEXT_MAX) : null,
+      lastAssistant: lastAssistant ? clipText(lastAssistant, ENDED_TEXT_MAX) : null,
+    };
+  }
+
+  private isHiddenProject(cwd: string): boolean {
+    const key = (path: string): string => (process.platform === 'win32' ? path.toLowerCase() : path);
+    return this.config.config.hiddenProjects.some((p) => key(p) === key(cwd));
+  }
+
   private isVisible(rec: SessionRecord): boolean {
     if (rec.registry === null || this.hiddenSessions.has(rec.sessionId)) return false;
-    const key = (path: string): string => (process.platform === 'win32' ? path.toLowerCase() : path);
-    const cwd = key(rec.cwd);
-    return !this.config.config.hiddenProjects.some((p) => key(p) === cwd);
+    return !this.isHiddenProject(rec.cwd);
   }
 
   private emit(): void {
@@ -658,7 +705,9 @@ export class SessionStore {
       (a, b) =>
         Number(b.pinned) - Number(a.pinned) || rank(a.sessionId) - rank(b.sessionId) || a.startedAt - b.startedAt,
     );
-    this.listener.snapshot({ tiles, header: this.header(tiles) });
+    // Hiding a project also drops its ended tiles.
+    const ended = this.endedSessions.current(now, (e) => this.isHiddenProject(e.cwd));
+    this.listener.snapshot({ tiles, ended, header: this.header(tiles) });
     if (transitions.length > 0) this.listener.transitions(transitions);
   }
 

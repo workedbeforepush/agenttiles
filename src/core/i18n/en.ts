@@ -25,6 +25,7 @@ export const en = {
     unknown: 'unknown',
     question: 'question',
     planReady: 'plan ready',
+    ended: 'ended',
   },
   activity: {
     thinking: 'thinking',

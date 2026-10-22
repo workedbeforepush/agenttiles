@@ -77,7 +77,10 @@ in any terminal or IDE. You don't have to start them in a special way.
 - Filter by state with a click on the header counters, group tiles by project, or switch to a compact list.
 - Fixed tile sizes with paging, full screen and keyboard control (all shortcuts configurable).
 - Start a new session in any recent project, optionally in its own **git worktree**, or **resume** an ended one, in a
-  new terminal tab.
+  new terminal tab. **Fork** a session (`claude --resume <id> --fork-session`) from its tile menu or the resume list
+  to try another direction on a copy of the conversation.
+- **Ended sessions stay as muted tiles** after the running ones for 24 hours, also across restarts, with **Resume**,
+  **Fork** and ✕. They count in no header counter and make no sound.
 - Pin, rename, reorder by drag and drop, hide sessions or whole projects.
 
 <img src="https://raw.githubusercontent.com/workedbeforepush/agenttiles/main/docs/images/list-view.png" alt="List view grouped by project">

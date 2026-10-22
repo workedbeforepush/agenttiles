@@ -21,5 +21,7 @@ export const newSession = {
   reading: 'Reading recent sessions…',
   noSessions: 'No ended sessions found.',
   sessionMeta: '{project} · {ago} ago',
-  hint: 'Opens {claude} (or {resume}, {worktree}) in a new terminal tab: Windows Terminal, iTerm2 or Terminal.app, or your Linux terminal.',
+  fork: 'Fork',
+  forkHint: 'Start a new session with a copy of this conversation',
+  hint: 'Opens {claude} (or {resume}, {fork}, {worktree}) in a new terminal tab: Windows Terminal, iTerm2 or Terminal.app, or your Linux terminal.',
 };

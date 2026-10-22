@@ -128,6 +128,8 @@ export interface HookEffects {
   /** Pending permission ids whose hook process must be released with "pass". */
   release: string[];
   ended: boolean;
+  /** The session ended for /clear: the same process goes on with a new session id. */
+  cleared: boolean;
   configChanged: boolean;
   /** A new user turn started (UserPromptSubmit). */
   turnStarted: boolean;
@@ -178,7 +180,7 @@ function releaseMatching(rec: SessionRecord, input: HookInput): string[] {
  * Applies one hook event. `now` is the event time (hook process start). PermissionRequest is handled by addPending.
  */
 export function applyHookEvent(rec: SessionRecord, input: HookInput, now: number): HookEffects {
-  const effects: HookEffects = { release: [], ended: false, configChanged: false, turnStarted: false };
+  const effects: HookEffects = { release: [], ended: false, cleared: false, configChanged: false, turnStarted: false };
   const event = s(input, 'hook_event_name') ?? '';
   rec.hooks = true;
   const transcriptPath = s(input, 'transcript_path');
@@ -199,6 +201,7 @@ export function applyHookEvent(rec: SessionRecord, input: HookInput, now: number
       break;
     case 'SessionEnd':
       effects.ended = true;
+      effects.cleared = s(input, 'reason') === 'clear';
       break;
     case 'UserPromptSubmit': {
       const prompt = s(input, 'prompt');

@@ -1,8 +1,18 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import type { Settings as SettingsType, SettingsView, Snapshot, TileSize, TileView, UpdateView, ViewMode } from '../../core/types';
+  import type {
+    EndedTileView,
+    Settings as SettingsType,
+    SettingsView,
+    Snapshot,
+    TileSize,
+    TileView,
+    UpdateView,
+    ViewMode,
+  } from '../../core/types';
   import Header from './components/Header.svelte';
   import Tile from './components/Tile.svelte';
+  import EndedTile from './components/EndedTile.svelte';
   import Banner from './components/Banner.svelte';
   import Settings from './components/Settings.svelte';
   import Doctor from './components/Doctor.svelte';
@@ -15,7 +25,7 @@
   import WithCode from './components/WithCode.svelte';
   import { setLocale, t } from './i18n.svelte';
   import { snapshot as demoSnapshot } from '../../core/demo';
-  import { filterTiles, groupTiles, paginate } from './layout';
+  import { filterEnded, filterTiles, groupTiles, paginate } from './layout';
   import type { StatusFilter } from '../../core/counters';
   import { NEEDS_YOU, paintTaskbarBadge, paintTrayIcon } from './format';
   import { SOUND_PRIORITY, playCue } from './sounds';
@@ -63,6 +73,7 @@
   /** The sessions from main; while the tour runs, the dashboard shows invented ones instead. */
   let live = $state<Snapshot>({
     tiles: [],
+    ended: [],
     header: {
       working: 0,
       waiting: 0,
@@ -100,13 +111,22 @@
   const viewMode = $derived<ViewMode>(settings?.viewMode ?? 'tiles');
   const grouped = $derived(settings?.groupByProject ?? false);
   const shownTiles = $derived(filterTiles(snapshot.tiles, filters));
-  const hiddenCount = $derived(snapshot.tiles.length - shownTiles.length);
-  /** Shown tiles in screen order (grouped by project when on); 1–9 follow this order. */
+  const shownEnded = $derived(filterEnded(snapshot.ended, filters));
+  const hiddenCount = $derived(
+    snapshot.tiles.length + snapshot.ended.length - shownTiles.length - shownEnded.length,
+  );
+  /** Shown live tiles in screen order (grouped by project when on); 1–9 follow this order. */
   const indexed = $derived(
     groupTiles(shownTiles.map((tile) => ({ tile })), grouped)
       .flatMap((block) => block.items)
       .map(({ tile }, i) => ({ tile, index: i + 1 })),
   );
+  type GridItem = { kind: 'live'; tile: TileView; index: number } | { kind: 'ended'; tile: EndedTileView };
+  /** Everything in the grid: live tiles, then ended ones (last in their project's block when grouped). */
+  const gridItems = $derived<GridItem[]>([
+    ...indexed.map(({ tile, index }) => ({ kind: 'live' as const, tile, index })),
+    ...shownEnded.map((tile) => ({ kind: 'ended' as const, tile })),
+  ]);
   const indexOf = $derived(new Map(indexed.map(({ tile, index }) => [tile.sessionId, index])));
   /** The banner lists every waiting session; one hidden by the filter has no number. */
   const waiting = $derived(
@@ -153,7 +173,7 @@
   );
   /** Pages of blocks (one per project when grouped); what does not fit goes to further pages. */
   const pageBlocks = $derived(
-    paginate(groupTiles(indexed, grouped), {
+    paginate(groupTiles(gridItems, grouped), {
       columns,
       height: Math.max(0, mainHeight - PAD_Y),
       rowHeight: (viewMode === 'list' ? ROW_H_EM : CARD_H_EM) * fontPx,
@@ -165,7 +185,9 @@
   const visibleBlocks = $derived(pageBlocks[page] ?? []);
 
   function showTile(sessionId: string): void {
-    const index = pageBlocks.findIndex((blocks) => blocks.some((b) => b.items.some(({ tile }) => tile.sessionId === sessionId)));
+    const index = pageBlocks.findIndex((blocks) =>
+      blocks.some((b) => b.items.some((item) => item.kind === 'live' && item.tile.sessionId === sessionId)),
+    );
     if (index >= 0) page = index;
   }
 
@@ -399,12 +421,12 @@
   {/if}
 
   <main bind:clientWidth={mainWidth} bind:clientHeight={mainHeight}>
-    {#if snapshot.tiles.length === 0}
+    {#if snapshot.tiles.length === 0 && snapshot.ended.length === 0}
       <div class="empty">
         <p>{t('app.empty.noSessions')}</p>
         <p class="hint"><WithCode text={t('app.empty.noSessionsHint')} codes={{ code: 'claude' }} /></p>
       </div>
-    {:else if shownTiles.length === 0}
+    {:else if gridItems.length === 0}
       <div class="empty">
         <p>{t('app.empty.noMatch')}</p>
         <p class="hint"><button class="link" onclick={() => (filters = [])}>{t('app.empty.showAll')}</button></p>
@@ -419,19 +441,23 @@
               style:--scale={scale}
               style:grid-template-columns={viewMode === 'tiles' ? `repeat(${columns}, minmax(0, 1fr))` : null}
             >
-              {#each block.items as { tile, index } (tile.sessionId)}
-                <Tile
-                  {tile}
-                  {now}
-                  {index}
-                  selected={tile.sessionId === selectedId}
-                  variant={viewMode === 'list' ? 'row' : 'card'}
-                  contextWarnPct={settings?.contextWarnPct ?? 80}
-                  fiveHourResetsAt={snapshot.header.fiveHour?.resetsAt ?? null}
-                  onDragStart={(id) => (dragId = id)}
-                  {onDropOn}
-                  onAnswer={openAnswer}
-                />
+              {#each block.items as item (`${item.kind}:${item.tile.sessionId}`)}
+                {#if item.kind === 'live'}
+                  <Tile
+                    tile={item.tile}
+                    {now}
+                    index={item.index}
+                    selected={item.tile.sessionId === selectedId}
+                    variant={viewMode === 'list' ? 'row' : 'card'}
+                    contextWarnPct={settings?.contextWarnPct ?? 80}
+                    fiveHourResetsAt={snapshot.header.fiveHour?.resetsAt ?? null}
+                    onDragStart={(id) => (dragId = id)}
+                    {onDropOn}
+                    onAnswer={openAnswer}
+                  />
+                {:else}
+                  <EndedTile tile={item.tile} {now} variant={viewMode === 'list' ? 'row' : 'card'} />
+                {/if}
               {/each}
             </div>
           </section>
@@ -445,7 +471,7 @@
               class="dot"
               class:active={i === page}
               class:waiting={(pageBlocks[i] ?? []).some((block) =>
-                block.items.some(({ tile }) => NEEDS_YOU.includes(tile.state)),
+                block.items.some((item) => item.kind === 'live' && NEEDS_YOU.includes(item.tile.state)),
               )}
               onclick={() => (page = i)}
               aria-label={t('app.pager.page', { page: i + 1 })}

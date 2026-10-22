@@ -1,12 +1,17 @@
 // Filtering, grouping and paging of tiles (DOM-free so it is testable in Node).
 import { FILTER_STATES, type StatusFilter } from '../../core/counters';
-import type { TileView } from '../../core/types';
+import type { EndedTileView, TileView } from '../../core/types';
 
 /** Header counters double as filters; none active shows everything. */
 export function filterTiles(tiles: TileView[], filters: StatusFilter[]): TileView[] {
   if (filters.length === 0) return tiles;
   const states = new Set(filters.flatMap((f) => FILTER_STATES[f]));
   return tiles.filter((t) => states.has(t.state));
+}
+
+/** Ended tiles belong to no counter: like `unknown`, any active filter hides them. */
+export function filterEnded(ended: EndedTileView[], filters: StatusFilter[]): EndedTileView[] {
+  return filters.length === 0 ? ended : [];
 }
 
 export interface Block<T> {
@@ -17,9 +22,9 @@ export interface Block<T> {
 
 /**
  * One block per project in order of first appearance (the store's order: pinned, manual, start time), or a single
- * untitled block when not grouped.
+ * untitled block when not grouped. Items keep their order in a block: ended tiles passed after the live ones stay last.
  */
-export function groupTiles<T extends { tile: TileView }>(items: T[], grouped: boolean): Block<T>[] {
+export function groupTiles<T extends { tile: { cwd: string; project: string } }>(items: T[], grouped: boolean): Block<T>[] {
   if (!grouped) return [{ title: null, items }];
   const blocks = new Map<string, Block<T>>();
   for (const item of items) {

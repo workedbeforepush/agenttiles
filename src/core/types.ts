@@ -192,8 +192,26 @@ export interface HeaderView {
   today: TodayView;
 }
 
+/**
+ * A session that ended recently (its process is gone): a muted tile to resume or fork from, until the user removes it
+ * or it expires. Not a session state: it has no counter, no number key and receives no requests.
+ */
+export interface EndedTileView {
+  sessionId: string;
+  cwd: string;
+  project: string;
+  name: string;
+  /** Epoch ms when AgentTiles saw the session end. */
+  endedAt: number;
+  lastPrompt: string | null;
+  lastAssistant: string | null;
+}
+
 export interface Snapshot {
+  /** Live sessions; the header counts these. */
   tiles: TileView[];
+  /** Recently ended sessions, most recently ended first; shown after the live tiles. */
+  ended: EndedTileView[];
   header: HeaderView;
 }
 
@@ -349,4 +367,8 @@ export type TileAction =
   | 'openFolder'
   | 'copySessionId'
   | 'focus'
+  | 'fork'
   | 'stop';
+
+/** What an ended tile offers: resume or fork it in a new terminal, or remove the tile. */
+export type EndedAction = 'resume' | 'fork' | 'remove' | 'openFolder' | 'copySessionId';

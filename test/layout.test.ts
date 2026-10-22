@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { filterTiles, groupTiles, paginate } from '../src/renderer/src/layout';
-import type { TileView } from '../src/core/types';
+import { filterEnded, filterTiles, groupTiles, paginate } from '../src/renderer/src/layout';
+import type { EndedTileView, TileView } from '../src/core/types';
 
 const tile = (id: string, state: TileView['state'], cwd = 'C:\\p\\a'): TileView =>
   ({ sessionId: id, state, cwd, project: cwd.split('\\').at(-1) }) as TileView;
@@ -12,6 +12,29 @@ describe('filter', () => {
     expect(filterTiles(tiles, [])).toHaveLength(7);
     expect(filterTiles(tiles, ['working']).map((t) => t.sessionId)).toEqual(['1', '2']);
     expect(filterTiles(tiles, ['waiting', 'done']).map((t) => t.sessionId)).toEqual(['3', '4', '5', '6']);
+  });
+});
+
+describe('ended tiles', () => {
+  const ended = [{ sessionId: 'x', cwd: 'C:\\p\\a', project: 'a' }] as EndedTileView[];
+
+  it('are hidden by any filter, as they belong to no counter', () => {
+    expect(filterEnded(ended, [])).toEqual(ended);
+    expect(filterEnded(ended, ['done'])).toEqual([]);
+  });
+
+  it('come last in their project block when grouped', () => {
+    const items = [
+      { tile: tile('1', 'working', 'C:\\p\\a') },
+      { tile: tile('2', 'done', 'C:\\p\\b') },
+      { tile: { sessionId: 'x', cwd: 'C:\\p\\a', project: 'a' } },
+      { tile: { sessionId: 'y', cwd: 'C:\\p\\c', project: 'c' } },
+    ];
+    expect(groupTiles(items, true).map((b) => [b.title, b.items.map((i) => i.tile.sessionId)])).toEqual([
+      ['a', ['1', 'x']],
+      ['b', ['2']],
+      ['c', ['y']],
+    ]);
   });
 });
 

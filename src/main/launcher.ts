@@ -109,23 +109,30 @@ function isWorktreeName(name: string): boolean {
 }
 
 /**
- * The claude command line: resume `sessionId`, or start fresh; `worktree` (a name, or '' for one Claude picks) starts
- * the new session in its own git worktree. Throws with a message for the user on invalid input.
+ * The claude command line: resume `sessionId` (with `fork`, as a new session with a copy of its conversation), or
+ * start fresh; `worktree` (a name, or '' for one Claude picks) starts the new session in its own git worktree. Throws
+ * with a message for the user on invalid input.
  */
-export function launchCommand(sessionId: string | null, worktree: string | null): string[] {
+export function launchCommand(sessionId: string | null, worktree: string | null, fork: boolean): string[] {
   if (sessionId !== null && !SESSION_ID.test(sessionId)) throw new Error(t('main.launch.invalidSessionId'));
+  if (fork && sessionId === null) throw new Error(t('main.invalidRequest'));
   if (worktree !== null && worktree !== '' && !isWorktreeName(worktree)) {
     throw new Error(t('main.launch.invalidWorktree', { name: worktree }));
   }
-  if (sessionId !== null) return ['claude', '--resume', sessionId];
+  if (sessionId !== null) return ['claude', '--resume', sessionId, ...(fork ? ['--fork-session'] : [])];
   if (worktree === null) return ['claude'];
   return worktree === '' ? ['claude', '--worktree'] : ['claude', '--worktree', worktree];
 }
 
 /** Starts `claude` in a new terminal tab (see `launchCommand`). Throws with a message for the user. */
-export async function launchSession(cwd: string, sessionId: string | null, worktree: string | null): Promise<void> {
+export async function launchSession(
+  cwd: string,
+  sessionId: string | null,
+  worktree: string | null,
+  fork: boolean,
+): Promise<void> {
   if (!isDirectory(cwd)) throw new Error(t('main.launch.folderNotFound', { path: cwd }));
-  const command = launchCommand(sessionId, worktree);
+  const command = launchCommand(sessionId, worktree, fork);
   const result = await openTerminal(cwd, command, cleanEnv());
   if (result === 'unsupported') throw new Error(t('main.launch.startUnsupported'));
   if (result === 'failed') throw new Error(t('main.launch.noTerminal'));

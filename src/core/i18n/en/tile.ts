@@ -33,6 +33,7 @@ export const tile = {
   diffHint: 'Review the change',
   deny: 'Deny',
   denyHint: 'Deny (D)',
+  forkHint: 'Start a new session with a copy of this conversation (claude --resume --fork-session)',
   footer: {
     contextHint: 'Context window used',
     compactSoon: 'compact soon',
@@ -52,6 +53,14 @@ export const tile = {
     lastPrompt: 'Last prompt',
     lastReply: 'Last reply',
   },
+  ended: {
+    sinceHint: 'Ended {time}',
+    resume: 'Resume',
+    resumeHint: 'Continue this session in a new terminal (claude --resume)',
+    fork: 'Fork',
+    remove: 'Remove',
+    removeHint: 'Remove this tile (ended tiles go away by themselves after 24 hours)',
+  },
   menu: {
     pin: 'Pin',
     unpin: 'Unpin',
@@ -61,6 +70,9 @@ export const tile = {
     hideProject: 'Hide project',
     openFolder: 'Open folder',
     copySessionId: 'Copy session id',
+    fork: 'Fork session',
+    resume: 'Resume',
+    remove: 'Remove',
     stopBackground: 'Stop background session…',
   },
   diffLines: {

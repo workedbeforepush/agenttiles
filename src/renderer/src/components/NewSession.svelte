@@ -27,11 +27,11 @@
     ),
   );
 
-  async function launch(cwd: string, sessionId: string | null, worktree: string | null = null): Promise<void> {
+  async function launch(cwd: string, sessionId: string | null, worktree: string | null = null, fork = false): Promise<void> {
     busy = true;
     error = null;
     try {
-      error = await window.agenttiles.launchSession(cwd, sessionId, worktree);
+      error = await window.agenttiles.launchSession(cwd, sessionId, worktree, fork);
       if (error === null) onClose();
     } catch (e) {
       error = (e as Error).message;
@@ -89,13 +89,23 @@
           <p class="hint">{t('newSession.noSessions')}</p>
         {/if}
         {#each sessions as session (session.sessionId)}
-          <button class="session" disabled={busy} title={session.cwd} onclick={() => void launch(session.cwd, session.sessionId)}>
-            <span class="title">{session.title}</span>
-            <span class="meta">{t('newSession.sessionMeta', { project: session.project, ago: since(session.lastAt, now) })}</span>
-          </button>
+          <div class="session-row">
+            <button class="session" disabled={busy} title={session.cwd} onclick={() => void launch(session.cwd, session.sessionId)}>
+              <span class="title">{session.title}</span>
+              <span class="meta">{t('newSession.sessionMeta', { project: session.project, ago: since(session.lastAt, now) })}</span>
+            </button>
+            <button
+              class="fork"
+              disabled={busy}
+              title={t('newSession.forkHint')}
+              onclick={() => void launch(session.cwd, session.sessionId, null, true)}
+            >
+              ⑂ {t('newSession.fork')}
+            </button>
+          </div>
         {/each}
       </div>
-      <p class="hint"><WithCode text={t('newSession.hint')} codes={{ claude: 'claude', resume: 'claude --resume', worktree: 'claude --worktree' }} /></p>
+      <p class="hint"><WithCode text={t('newSession.hint')} codes={{ claude: 'claude', resume: 'claude --resume', fork: 'claude --resume --fork-session', worktree: 'claude --worktree' }} /></p>
     </div>
   {:else}
     {@const target = picked}
@@ -290,8 +300,16 @@
     overflow: auto;
   }
 
+  .session-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
   .session {
     display: flex;
+    flex: 1;
+    min-width: 0;
     flex-direction: column;
     align-items: flex-start;
     gap: 1px;
@@ -305,6 +323,21 @@
   .session:hover:not(:disabled) {
     background: var(--surface-2);
     border-color: var(--border);
+  }
+
+  .fork {
+    flex-shrink: 0;
+    padding: 3px 10px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .fork:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--text);
   }
 
   .title {
