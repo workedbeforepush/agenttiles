@@ -1,6 +1,7 @@
 // Incremental parser for Claude Code transcripts (~/.claude/projects/<slug>/<sessionId>.jsonl).
 // Only the main chain is considered; subagent lines (isSidechain) are skipped.
 import { clipText, toolSummary } from './tools';
+import { namesOurScript } from './hookConfig';
 
 export interface TranscriptInfo {
   aiTitle: string | null;
@@ -14,6 +15,11 @@ export interface TranscriptInfo {
   /** Most recent tool calls, newest last (at most 3). */
   recentTools: string[];
   gitBranch: string | null;
+  /**
+   * Claude Code ran AgentTiles' hook in this session (a stop hook summary names it). Hook events only reach the app
+   * while it runs, so after an AgentTiles restart an idle session proves its hooks this way.
+   */
+  ourHooks: boolean;
 }
 
 export function emptyTranscriptInfo(): TranscriptInfo {
@@ -27,6 +33,7 @@ export function emptyTranscriptInfo(): TranscriptInfo {
     activeTool: null,
     recentTools: [],
     gitBranch: null,
+    ourHooks: false,
   };
 }
 
@@ -87,6 +94,15 @@ export function applyTranscriptLine(info: TranscriptInfo, line: string): void {
 
   if (type === 'ai-title' && typeof entry['aiTitle'] === 'string') {
     info.aiTitle = entry['aiTitle'];
+    return;
+  }
+
+  if (type === 'system' && entry['subtype'] === 'stop_hook_summary' && Array.isArray(entry['hookInfos'])) {
+    const ours = (entry['hookInfos'] as unknown[]).some((h) => {
+      const command = (h as Record<string, unknown> | null)?.['command'];
+      return typeof command === 'string' && namesOurScript(command);
+    });
+    if (ours) info.ourHooks = true;
     return;
   }
 

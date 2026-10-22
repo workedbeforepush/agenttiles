@@ -556,7 +556,7 @@ export function toTile(rec: SessionRecord, overrides: TileOverrides): TileView {
     tasksTotal: tasks.length,
     costUsd: rec.statusline?.costUsd ?? null,
     contextPct: rec.statusline?.contextPct ?? null,
-    hooks: rec.hooks,
+    hooks: rec.hooks || t.ourHooks,
     pinned: overrides.pinned,
     startedAt: rec.registry?.startedAt ?? rec.firstSeen,
     lastPrompt: t.lastPrompt,

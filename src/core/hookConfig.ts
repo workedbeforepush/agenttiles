@@ -50,7 +50,7 @@ export interface InstallOptions {
 /** The script as a whole path element ('.../agenttiles-hook.js'), not any text that merely contains the name. */
 const OUR_SCRIPT = /(^|[\\/"'\s])agenttiles-hook\.js(?=$|["'\s])/;
 
-function namesOurScript(text: string): boolean {
+export function namesOurScript(text: string): boolean {
   return OUR_SCRIPT.test(text);
 }
 

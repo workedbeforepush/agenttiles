@@ -73,6 +73,16 @@ describe('transcript', () => {
     expect(info.lastAssistantAt).toBeGreaterThan(info.lastPromptAt);
   });
 
+  it('sees from a stop hook summary that the session runs our hooks', () => {
+    const info = emptyTranscriptInfo();
+    const summary = (command: string): string =>
+      JSON.stringify({ type: 'system', subtype: 'stop_hook_summary', hookCount: 1, hookInfos: [{ command }] });
+    applyTranscriptLine(info, summary('node C:\\tools\\other-hook.js'));
+    expect(info.ourHooks).toBe(false);
+    applyTranscriptLine(info, summary('C:\\nodejs\\node.exe C:\\Users\\me\\AppData\\Roaming\\agenttiles\\agenttiles-hook.js hook'));
+    expect(info.ourHooks).toBe(true);
+  });
+
   it('clears the active tool on a tool result', () => {
     const info = emptyTranscriptInfo();
     info.activeTool = 'Bash: npm test';
