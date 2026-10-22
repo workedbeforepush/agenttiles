@@ -20,7 +20,8 @@ export interface AgentTilesApi {
   updateSettings(patch: SettingsPatch): Promise<SettingsView>;
   setHooks(enabled: boolean): Promise<SettingsView>;
   setStatusline(enabled: boolean): Promise<SettingsView>;
-  finishFirstRun(): Promise<SettingsView>;
+  /** Closes the hook prompt until the next start, or for good with `forever`. */
+  closeHookPrompt(forever: boolean): Promise<SettingsView>;
   unhideSession(sessionId: string): Promise<SettingsView>;
   unhideProject(path: string): Promise<SettingsView>;
   tileAction(sessionId: string, action: TileAction): Promise<void>;

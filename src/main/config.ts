@@ -14,7 +14,8 @@ export interface WindowBounds {
 
 export interface Config {
   settings: Settings;
-  firstRunDone: boolean;
+  /** "Don't ask again" in the hook prompt: AgentTiles no longer offers the hooks at start. */
+  hookPromptOff: boolean;
   pins: string[];
   /** Manual tile order (drag and drop), session ids. */
   order: string[];
@@ -144,7 +145,7 @@ export class ConfigStore {
     if (!existsSync(this.path)) {
       return {
         settings: { ...DEFAULT_SETTINGS },
-        firstRunDone: false,
+        hookPromptOff: false,
         pins: [],
         order: [],
         hiddenProjects: [],
@@ -158,7 +159,7 @@ export class ConfigStore {
     const renames = (raw['renames'] ?? {}) as Record<string, unknown>;
     return {
       settings: normaliseSettings((raw['settings'] ?? {}) as Record<string, unknown>),
-      firstRunDone: state['firstRunDone'] === true,
+      hookPromptOff: state['hookPromptOff'] === true,
       pins: stringList(state['pins']),
       order: stringList(state['order']),
       hiddenProjects: stringList(state['hiddenProjects']),
@@ -173,7 +174,7 @@ export class ConfigStore {
     const c = this.config;
     const doc: Record<string, unknown> = {
       settings: c.settings,
-      state: { firstRunDone: c.firstRunDone, pins: c.pins, order: c.order, hiddenProjects: c.hiddenProjects },
+      state: { hookPromptOff: c.hookPromptOff, pins: c.pins, order: c.order, hiddenProjects: c.hiddenProjects },
       renames: c.renames,
     };
     if (c.window) doc['window'] = c.window;

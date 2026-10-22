@@ -185,15 +185,20 @@ async function start(): Promise<void> {
     }
   }
 
-  const settingsView = (): SettingsView => ({
-    version: app.getVersion(),
-    settings: settings(),
-    hiddenProjects: config.config.hiddenProjects,
-    hiddenSessions: store.hiddenSessionList(),
-    integration: integration.status(settings().permissionTimeoutSec),
-    firstRun: !config.config.firstRunDone,
-    platform: process.platform,
-  });
+  // "Not now" closes the hook prompt until the next start.
+  let hookPromptClosed = false;
+  const settingsView = (): SettingsView => {
+    const status = integration.status(settings().permissionTimeoutSec);
+    return {
+      version: app.getVersion(),
+      settings: settings(),
+      hiddenProjects: config.config.hiddenProjects,
+      hiddenSessions: store.hiddenSessionList(),
+      integration: status,
+      askHooks: !status.hooksInstalled && !hookPromptClosed && !config.config.hookPromptOff,
+      platform: process.platform,
+    };
+  };
 
   const tray = new AppTray({
     toggle: () => (win.isVisible() ? win.hide() : showWindow()),
@@ -227,9 +232,12 @@ async function start(): Promise<void> {
     integration.setStatusline(enabled);
     return settingsView();
   });
-  ipcMain.handle('firstrun:done', () => {
-    config.config.firstRunDone = true;
-    config.save();
+  ipcMain.handle('hookprompt:close', (_e, forever: boolean) => {
+    hookPromptClosed = true;
+    if (forever) {
+      config.config.hookPromptOff = true;
+      config.save();
+    }
     return settingsView();
   });
   ipcMain.handle('unhide:session', (_e, sessionId: string) => {

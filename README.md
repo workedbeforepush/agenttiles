@@ -89,8 +89,8 @@ agenttiles
 The `agenttiles` command starts the app and returns right away; the terminal can be closed. The very first start
 downloads Electron (about 100 MB) and takes a little longer. Run it again to bring the window to the front. AgentTiles checks npm for new versions and offers **Update and restart** in its header.
 
-On first start, AgentTiles asks whether to install its **hooks** and the **statusline wrapper** in
-`~/.claude/settings.json`:
+While its hooks are not installed, AgentTiles asks at start whether to install them and the **statusline wrapper**
+in `~/.claude/settings.json` (**Not now** asks again next start, **Don't ask again** leaves it to Settings):
 
 - **Without them**, AgentTiles still shows every session and its state, from Claude Code's session registry and
   transcripts.

@@ -409,7 +409,7 @@ export function settingsView(): SettingsView {
     hiddenProjects: [],
     hiddenSessions: [],
     integration: { hooksInstalled: true, statuslineInstalled: true, nodePath: 'C:\\Program Files\\nodejs\\node.exe', error: null },
-    firstRun: false,
+    askHooks: false,
     platform: 'win32',
   };
 }
