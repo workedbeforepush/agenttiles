@@ -81,6 +81,8 @@ export function selectTabScript(terminal: MacTerminal, tty: string): string {
  * `do script` always opens a window (a tab there would need keystrokes through System Events).
  */
 export function openScript(terminal: MacTerminal, cwd: string, command: string[], target: TerminalTarget): string {
+  // The line is typed into an interactive shell, whose line editor acts on control characters even inside quotes.
+  if (/[\x00-\x1f\x7f]/.test([cwd, ...command].join(''))) throw new Error(`control character in ${JSON.stringify(cwd)}`);
   const line = appleString(`cd ${shellQuote(cwd)} && ${command.map(shellQuote).join(' ')}`);
   if (terminal === 'Terminal') {
     return ['tell application "Terminal"', '  activate', `  do script ${line}`, 'end tell'].join('\n');

@@ -142,6 +142,8 @@ describe('UsageLog', () => {
     // A fork copies earlier responses into a new transcript: they do not count again.
     writeFileSync(join(root, 'demo', 'fork.jsonl'), `${line('a', USAGE)}\n`);
     expect(await log.scan()).toBe(false);
+    // Later scans within the save interval are saved on quit.
+    log.flush();
   });
 
   it('keeps days after the transcripts are gone', async () => {
@@ -151,5 +153,18 @@ describe('UsageLog', () => {
     expect(log.day(date)['demo-project']?.['claude-opus-5-5']?.outputTokens).toBe(6000);
     expect(log.firstDate()).toBe(date);
     expect(log.models([date])['claude-opus-5-5']?.inputTokens).toBe(3000);
+  });
+
+  it('keeps a project folder named __proto__ out of Object.prototype after a restart', async () => {
+    // usage.json from an earlier run already has this day; the new response comes from a folder named __proto__.
+    const other = { inputTokens: 1, outputTokens: 1, cacheWriteTokens: 0, cacheReadTokens: 0, costUsd: 0 };
+    const days = { [date]: { 'other-project': { 'claude-opus-5-5': other } } };
+    writeFileSync(join(data, 'usage.json'), JSON.stringify({ version: 1, offsets: {}, seen: {}, days }));
+    mkdirSync(join(root, 'proto'), { recursive: true });
+    writeFileSync(join(root, 'proto', 'p.jsonl'), `${line('p', USAGE, { cwd: 'C:\\work\\__proto__' })}\n`);
+    const log = new UsageLog(data, root, now);
+    await log.scan();
+    expect(log.day(date)['__proto__']?.['claude-opus-5-5']?.outputTokens).toBe(2000);
+    expect(({} as Record<string, unknown>)['claude-opus-5-5']).toBeUndefined();
   });
 });

@@ -10,6 +10,8 @@ import { t } from './i18n';
 export const PACKAGE = 'agenttiles';
 const REGISTRY_URL = `https://registry.npmjs.org/${PACKAGE}/latest`;
 const LOG_TAIL_LINES = 6;
+/** x.y.z with an optional pre-release: the version ends up in the update script, so nothing else gets through. */
+const VERSION = /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/;
 
 function parts(version: string): [number[], string | null] {
   const [core = '', pre = null] = version.split('-', 2) as [string, string?];
@@ -28,6 +30,12 @@ export function compareVersions(a: string, b: string): number {
   if (pa === null) return 1;
   if (pb === null) return -1;
   return pa < pb ? -1 : 1;
+}
+
+/** The version in the registry's answer for the latest release, or null when it is missing or not x.y.z. */
+export function latestVersion(body: unknown): string | null {
+  const version = (body as { version?: unknown } | null)?.version;
+  return typeof version === 'string' && VERSION.test(version) ? version : null;
 }
 
 export function updateCommand(version: string): string {
@@ -52,6 +60,14 @@ export function updateScript(platform: NodeJS.Platform, version: string): { name
     name: 'update.sh',
     text: ['#!/bin/sh', 'sleep 3', `${updateCommand(version)} > "$(dirname "$0")/update.log" 2>&1`, PACKAGE, ''].join('\n'),
   };
+}
+
+/**
+ * cmd.exe arguments that run the script at `path`. With /s, cmd strips exactly the outer quotes and keeps the inner
+ * ones, so a path with & or ( stays one quoted word; the arguments go to cmd.exe verbatim.
+ */
+export function cmdArgs(path: string): string[] {
+  return ['/d', '/s', '/c', `""${path}""`];
 }
 
 function npm(args: string[]): Promise<string> {
@@ -102,8 +118,10 @@ export class Updater {
     try {
       const response = await fetch(REGISTRY_URL, { signal: AbortSignal.timeout(10_000) });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const { version } = (await response.json()) as { version?: unknown };
-      if (typeof version === 'string') this.latest = version;
+      const body: unknown = await response.json();
+      const version = latestVersion(body);
+      if (version) this.latest = version;
+      else log.warn('update check: the registry answered without a valid version');
     } catch (error) {
       log.debug(`update check failed: ${(error as Error).message}`);
     }
@@ -133,16 +151,28 @@ export class Updater {
   }
 
   /** Starts the detached update script; the caller quits the app right after. */
-  install(version: string): void {
+  /** Resolves once the update script runs; rejects when it could not start, and AgentTiles must not quit then. */
+  install(version: string): Promise<void> {
     const script = updateScript(process.platform, version);
     const path = join(this.userData, script.name);
     writeFileSync(path, script.text, { mode: 0o755 });
     writeFileSync(this.markerPath, JSON.stringify({ target: version } satisfies Marker));
     const child =
       process.platform === 'win32'
-        ? spawn('cmd.exe', ['/d', '/c', path], { detached: true, stdio: 'ignore', windowsHide: true })
+        ? spawn('cmd.exe', cmdArgs(path), { detached: true, stdio: 'ignore', windowsHide: true, windowsVerbatimArguments: true })
         : spawn('/bin/sh', [path], { detached: true, stdio: 'ignore' });
     child.unref();
-    log.info(`update to ${version} started (${path})`);
+    return new Promise((resolve, reject) => {
+      child.once('spawn', () => {
+        log.info(`update to ${version} started (${path})`);
+        resolve();
+      });
+      // Nothing was updated: without the marker the next start does not report an npm failure that never happened.
+      child.once('error', (error) => {
+        log.error('update script did not start', error);
+        rmSync(this.markerPath, { force: true });
+        reject(error);
+      });
+    });
   }
 }

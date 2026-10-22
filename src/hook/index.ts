@@ -4,14 +4,17 @@ import { randomUUID } from 'node:crypto';
 import { appendFileSync, existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { createConnection, type Socket } from 'node:net';
 import { join } from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import {
   ENDPOINT_FILE_NAME,
   PROTOCOL_VERSION,
   LineSplitter,
   encode,
+  eventPayload,
+  newNonce,
   parseEndpoint,
   permissionOutput,
+  proofValid,
   replyExtras,
   type DecisionExtras,
   type Endpoint,
@@ -72,9 +75,49 @@ function connect(path: string): Promise<Socket | null> {
   });
 }
 
+/**
+ * Connects and makes the endpoint prove it knows the token before anything is sent: the endpoint file outlives a crash,
+ * and on Windows another user can create a pipe under the stale name. Null when the app is not running or the endpoint
+ * fails the proof within SEND_TIMEOUT_MS.
+ */
+async function open(endpoint: Endpoint): Promise<Socket | null> {
+  const socket = await connect(endpoint.path);
+  if (!socket) return null;
+  const nonce = newNonce();
+  return new Promise((resolve) => {
+    const splitter = new LineSplitter();
+    let settled = false;
+    const finish = (ok: boolean): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      socket.off('data', onData);
+      if (!ok) socket.destroy();
+      resolve(ok ? socket : null);
+    };
+    const timer = setTimeout(() => {
+      logError('handshake timeout');
+      finish(false);
+    }, SEND_TIMEOUT_MS);
+    const onData = (chunk: string): void => {
+      const lines = splitter.push(chunk);
+      const line = lines?.[0];
+      if (lines !== null && line === undefined) return;
+      const ok = line !== undefined && proofValid(line, endpoint.token, nonce);
+      if (!ok) logError('endpoint failed the handshake, nothing sent');
+      finish(ok);
+    };
+    socket.setEncoding('utf8');
+    socket.on('data', onData);
+    socket.on('error', () => finish(false));
+    socket.on('close', () => finish(false));
+    socket.write(encode({ v: PROTOCOL_VERSION, kind: 'hello', nonce }));
+  });
+}
+
 /** Sends one message and closes the connection. Gives up after SEND_TIMEOUT_MS. */
 async function send(endpoint: Endpoint, message: HookMessage): Promise<void> {
-  const socket = await connect(endpoint.path);
+  const socket = await open(endpoint);
   if (!socket) return;
   await new Promise<void>((resolve) => {
     const timer = setTimeout(() => {
@@ -97,7 +140,7 @@ interface Answer {
 
 /** Sends a permission request and waits for the app's decision. "pass" when the app goes away. */
 async function requestPermission(endpoint: Endpoint, payload: Record<string, unknown>): Promise<Answer> {
-  const socket = await connect(endpoint.path);
+  const socket = await open(endpoint);
   if (!socket) return { decision: 'pass' };
   const id = randomUUID();
   return new Promise((resolve) => {
@@ -109,7 +152,6 @@ async function requestPermission(endpoint: Endpoint, payload: Record<string, unk
       socket.destroy();
       resolve(answer);
     };
-    socket.setEncoding('utf8');
     socket.on('data', (chunk: string) => {
       const lines = splitter.push(chunk);
       if (lines === null) {
@@ -140,20 +182,36 @@ function chainShell(command: string): { file: string; args: string[] } {
   return { file: process.env['ComSpec'] ?? 'cmd.exe', args: ['/d', '/s', '/c', command] };
 }
 
-/** Runs the statusline command that was configured before AgentTiles, if any, and returns its output. */
-function runChain(input: string): string {
-  if (!existsSync(CHAIN_FILE)) return '';
+/** The statusline command that was configured before AgentTiles, if any. */
+function chainCommand(): string | null {
+  if (!existsSync(CHAIN_FILE)) return null;
   try {
     const chain = JSON.parse(readFileSync(CHAIN_FILE, 'utf8')) as { command?: unknown };
-    if (typeof chain.command !== 'string' || chain.command.length === 0) return '';
-    const { file, args } = chainShell(chain.command);
-    const result = spawnSync(file, args, { input, encoding: 'utf8', windowsHide: true, timeout: CHAIN_TIMEOUT_MS });
-    if (result.error) logError(`statusline chain failed: ${result.error.message}`);
-    return result.stdout ?? '';
+    return typeof chain.command === 'string' && chain.command.length > 0 ? chain.command : null;
   } catch (error) {
     logError(`statusline chain failed: ${(error as Error).message}`);
-    return '';
+    return null;
   }
+}
+
+/** Runs the chained statusline command and returns its output; asynchronous, so the send to the app runs alongside. */
+function runChain(input: string): Promise<string> {
+  const command = chainCommand();
+  if (!command) return Promise.resolve('');
+  const { file, args } = chainShell(command);
+  return new Promise((resolve) => {
+    const child = spawn(file, args, { windowsHide: true, timeout: CHAIN_TIMEOUT_MS });
+    let stdout = '';
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data', (chunk: string) => (stdout += chunk));
+    child.on('error', (error) => {
+      logError(`statusline chain failed: ${error.message}`);
+      resolve(stdout);
+    });
+    child.on('close', () => resolve(stdout));
+    child.stdin.on('error', () => undefined);
+    child.stdin.end(input);
+  });
 }
 
 function parse(raw: string): Record<string, unknown> | null {
@@ -182,10 +240,13 @@ async function main(): Promise<void> {
   if (mode === 'statusline') {
     deadline(STATUSLINE_DEADLINE_MS);
     const payload = parse(raw);
-    if (payload && endpoint) {
-      await send(endpoint, { v: PROTOCOL_VERSION, token: endpoint.token, ts: STARTED_AT, kind: 'statusline', payload });
-    }
-    process.stdout.write(runChain(raw));
+    const [, output] = await Promise.all([
+      payload && endpoint
+        ? send(endpoint, { v: PROTOCOL_VERSION, token: endpoint.token, ts: STARTED_AT, kind: 'statusline', payload })
+        : undefined,
+      runChain(raw),
+    ]);
+    process.stdout.write(output);
     return;
   }
 
@@ -201,7 +262,9 @@ async function main(): Promise<void> {
     return;
   }
   deadline(EVENT_DEADLINE_MS);
-  if (endpoint) await send(endpoint, { v: PROTOCOL_VERSION, token: endpoint.token, ts: STARTED_AT, kind: 'event', payload });
+  if (endpoint) {
+    await send(endpoint, { v: PROTOCOL_VERSION, token: endpoint.token, ts: STARTED_AT, kind: 'event', payload: eventPayload(payload) });
+  }
 }
 
 main()

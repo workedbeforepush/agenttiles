@@ -73,7 +73,7 @@ export const settings = {
     actions: {
       selectTile: 'Select tile',
       jump: 'Jump to terminal / answer question',
-      deny: 'Deny the waiting request',
+      deny: "Deny the selected tile's request",
       escape: 'Clear selection / leave full screen',
       fullscreen: 'Full screen',
       nextPage: 'Next page',

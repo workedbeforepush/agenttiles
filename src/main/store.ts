@@ -12,6 +12,7 @@ import {
 } from 'node:fs';
 import { open } from 'node:fs/promises';
 import { join } from 'node:path';
+import { StringDecoder } from 'node:string_decoder';
 import type { DecisionRequest, HeaderView, ProjectDay, RateLimit, SessionState, Snapshot, StatsView, TileView } from '../core/types';
 import { toolDiff } from '../core/diff';
 import { isRegistryFileName, parseRegistryEntry, type RegistryEntry } from '../core/registry';
@@ -31,6 +32,7 @@ import {
 import type { DecisionExtras, PermissionDecision } from '../core/protocol';
 import { addSample, limitEta, type UsageSample } from '../core/forecast';
 import { countStates } from '../core/counters';
+import { sleptWithin, type Sleep } from '../core/sleep';
 import { isAlive } from './platform';
 import type { ConfigStore } from './config';
 import { dateOf, type DailyStats } from './daily';
@@ -57,6 +59,7 @@ const TRANSCRIPT_START_BYTES = 2 * 1024 * 1024;
 const TRANSCRIPT_READ_BYTES = 4 * 1024 * 1024;
 /** Write diffs compare against the current file; bigger files are not read (the request shows its raw input). */
 const DIFF_FILE_MAX_BYTES = 2 * 1024 * 1024;
+const SLEEP_HORIZON_MS = 48 * 3_600_000;
 /** Chunk size when searching the skipped start of a transcript for the session title. */
 const TITLE_SCAN_BYTES = 1024 * 1024;
 const TITLE_SCAN_OVERLAP = 8 * 1024;
@@ -65,6 +68,8 @@ interface Tail {
   path: string;
   offset: number;
   partial: string;
+  /** Keeps a character split across two reads intact. */
+  decoder: StringDecoder;
   /** The first line after a mid-file start is incomplete and must be dropped. */
   dropFirstLine: boolean;
   watcher: FSWatcher | null;
@@ -94,6 +99,8 @@ export class SessionStore {
   private readonly misses = new Map<string, number>();
   /** Processes AgentTiles started itself (limit probes); their registry entries are not sessions of the user. */
   private readonly ownPids = new Set<number>();
+  private sleeps: Sleep[] = [];
+  private suspendedAt: number | null = null;
   private fiveHour: RateLimit | null = null;
   private sevenDay: RateLimit | null = null;
   private fiveHourSamples: UsageSample[] = [];
@@ -268,7 +275,7 @@ export class SessionStore {
         if (!existsSync(path)) return;
         const size = statSync(path).size;
         const offset = Math.max(0, size - TRANSCRIPT_START_BYTES);
-        const created: Tail = { path, offset, partial: '', dropFirstLine: offset > 0, watcher: null, timer: null };
+        const created: Tail = { path, offset, partial: '', decoder: new StringDecoder('utf8'), dropFirstLine: offset > 0, watcher: null, timer: null };
         this.tails.set(rec.sessionId, created);
         // The title is needed for the tile name and the terminal tab; it may sit in the part that was skipped.
         if (offset > 0) void this.backfillTitle(rec, path, offset);
@@ -345,19 +352,21 @@ export class SessionStore {
       tail.offset = Math.max(0, size - TRANSCRIPT_START_BYTES);
       tail.dropFirstLine = tail.offset > 0;
       tail.partial = '';
+      tail.decoder = new StringDecoder('utf8');
       rec.transcript = emptyTranscriptInfo();
     }
     if (size === tail.offset) return false;
     const length = Math.min(size - tail.offset, TRANSCRIPT_READ_BYTES);
     const buffer = Buffer.alloc(length);
     const fd = openSync(tail.path, 'r');
+    let read: number;
     try {
-      readSync(fd, buffer, 0, length, tail.offset);
+      read = readSync(fd, buffer, 0, length, tail.offset);
     } finally {
       closeSync(fd);
     }
-    tail.offset += length;
-    const lines = (tail.partial + buffer.toString('utf8')).split('\n');
+    tail.offset += read;
+    const lines = (tail.partial + tail.decoder.write(buffer.subarray(0, read))).split('\n');
     tail.partial = lines.pop() ?? '';
     if (tail.dropFirstLine && lines.length > 0) {
       lines.shift();
@@ -629,7 +638,10 @@ export class SessionStore {
         continue;
       }
       const change = refreshView(rec, now);
-      if (change) this.daily.addStateTime(change.from, change.durationMs, projectName(rec.cwd));
+      if (change) {
+        const awakeMs = change.durationMs - sleptWithin(this.sleeps, now - change.durationMs, now);
+        this.daily.addStateTime(change.from, awakeMs, projectName(rec.cwd));
+      }
       this.daily.sawSession(rec.sessionId);
       const tile = this.tileOf(rec);
       tiles.push(tile);
@@ -650,8 +662,29 @@ export class SessionStore {
     if (transitions.length > 0) this.listener.transitions(transitions);
   }
 
+  /** States that have not ended yet; `sinceMs` moves forward by the time slept since, so only awake time counts. */
   private ongoing(tiles: TileView[]): { state: SessionState; sinceMs: number; project: string }[] {
-    return tiles.map((t) => ({ state: t.state, sinceMs: t.stateSince, project: t.project }));
+    const now = Date.now();
+    return tiles.map((t) => ({
+      state: t.state,
+      sinceMs: t.stateSince + sleptWithin(this.sleeps, t.stateSince, now),
+      project: t.project,
+    }));
+  }
+
+  /** The machine goes to sleep (powerMonitor). */
+  suspended(at: number): void {
+    this.suspendedAt = at;
+  }
+
+  /** The machine woke up: the sleep does not count as working or waiting time. */
+  resumed(at: number): void {
+    if (this.suspendedAt !== null) this.sleeps.push({ from: this.suspendedAt, to: at });
+    this.suspendedAt = null;
+    // Older sleeps cannot matter: addStateTime books at most today and the 24 hours before.
+    const horizon = at - SLEEP_HORIZON_MS;
+    this.sleeps = this.sleeps.filter((s) => s.to >= horizon);
+    this.changed();
   }
 
   private scanUsage(): void {

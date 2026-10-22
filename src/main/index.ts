@@ -7,11 +7,12 @@ import {
   ipcMain,
   nativeImage,
   nativeTheme,
+  powerMonitor,
   screen,
   shell,
   type BrowserWindow,
 } from 'electron';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ENDPOINT_FILE_NAME, newEndpoint } from '../core/protocol';
 import type {
@@ -59,11 +60,16 @@ if (!app.requestSingleInstanceLock()) {
   app.setAppUserModelId(APP_ID);
   void app.whenReady().then(start).catch((error: unknown) => {
     log.error('startup failed', error);
+    // The log may not be open yet (a broken config.toml fails before it): tell the user directly.
+    dialog.showErrorBox(t('main.startupFailed'), (error as Error).message);
     app.exit(1);
   });
 }
 
 async function start(): Promise<void> {
+  // Windows looks up bare executable names (powershell.exe, wt.exe, npm, claude) in the current directory before PATH;
+  // started as `agenttiles` from a cloned repo, that directory is not ours to trust.
+  process.chdir(app.getPath('home'));
   const userData = app.getPath('userData');
   const config = new ConfigStore(userData);
   initLog(userData, config.config.settings.logLevel);
@@ -130,6 +136,8 @@ async function start(): Promise<void> {
   // Fresh random endpoint and token on every start; unix sockets live in a directory only the user can enter.
   const ipcDir = join(userData, 'ipc');
   mkdirSync(ipcDir, { recursive: true, mode: 0o700 });
+  // mkdir's mode applies only when it creates the directory.
+  chmodSync(ipcDir, 0o700);
   const endpoint = newEndpoint(ipcDir);
   writeFileSync(join(userData, ENDPOINT_FILE_NAME), JSON.stringify(endpoint), { mode: 0o600 });
   ipc = new IpcServer(endpoint, {
@@ -335,7 +343,8 @@ async function start(): Promise<void> {
     config.save();
     store.changed();
   });
-  ipcMain.handle('tile:rename', (_e, sessionId: string, name: string | null) => {
+  ipcMain.handle('tile:rename', (_e, sessionId: unknown, name: unknown) => {
+    if (typeof sessionId !== 'string' || (name !== null && typeof name !== 'string')) return;
     const trimmed = name?.trim() ?? '';
     const { [sessionId]: _old, ...rest } = config.config.renames;
     config.config.renames = trimmed ? { ...rest, [sessionId]: trimmed } : rest;
@@ -362,8 +371,9 @@ async function start(): Promise<void> {
     log.info(`permission ${id}: ${clean.decision}${clean.always ? ' always' : ''} from AgentTiles${ok ? '' : ' (gone)'}`);
     return ok;
   });
-  ipcMain.handle('tiles:order', (_e, ids: string[]) => {
-    config.config.order = ids.filter((id) => typeof id === 'string');
+  ipcMain.handle('tiles:order', (_e, ids: unknown) => {
+    if (!Array.isArray(ids)) return;
+    config.config.order = ids.filter((id): id is string => typeof id === 'string');
     config.save();
     store.changed();
   });
@@ -417,7 +427,8 @@ async function start(): Promise<void> {
   }
 
   ipcMain.handle('icons:size', () => Math.round(16 * screen.getPrimaryDisplay().scaleFactor));
-  ipcMain.on('status:icons', (_e, trayPng: string, tooltip: string, badgePng: string | null, waiting: number) => {
+  ipcMain.on('status:icons', (_e, trayPng: unknown, tooltip: unknown, badgePng: string | null, waiting: number) => {
+    if (typeof trayPng !== 'string' || typeof tooltip !== 'string') return;
     const trayImage = nativeImage.createFromDataURL(trayPng);
     if (!trayImage.isEmpty()) tray.setIcon(trayImage, tooltip);
     showWaitingCount(badgePng, typeof waiting === 'number' ? waiting : 0);
@@ -430,15 +441,20 @@ async function start(): Promise<void> {
     ),
   );
 
+  powerMonitor.on('suspend', () => store.suspended(Date.now()));
+  powerMonitor.on('resume', () => store.resumed(Date.now()));
+
   app.on('second-instance', showWindow);
   // macOS: a click on the Dock icon brings the window back.
   app.on('activate', showWindow);
   app.on('before-quit', () => {
     quitting = true;
-    server.stop();
-    store.stop();
     globalShortcut.unregisterAll();
     tray.destroy();
+    server.stop();
+    // Last: these write the stats files and may throw.
+    usage.flush();
+    store.stop();
   });
   app.on('window-all-closed', () => {
     // Keep running in the tray.
@@ -446,14 +462,6 @@ async function start(): Promise<void> {
 
   applySettings(null);
   integration.repair(settings().permissionTimeoutSec);
-  try {
-    await server.start();
-  } catch (error) {
-    log.error(`ipc server could not listen on ${server.path}`, error);
-  }
-  store.start();
-  setTimeout(() => store.pruneConfig(), 10_000);
-  setInterval(() => store.pruneConfig(), PRUNE_INTERVAL_MS);
 
   let probing: Promise<boolean> | null = null;
   /** One probe at a time; a click while a probe runs waits for that probe. */
@@ -492,7 +500,12 @@ async function start(): Promise<void> {
         cancelId: 1,
       });
       if (response !== 0) return;
-      updater.install(view.available);
+      try {
+        await updater.install(view.available);
+      } catch (error) {
+        dialog.showErrorBox(t('main.updateDialog.notStarted'), (error as Error).message);
+        return;
+      }
       quitting = true;
       app.quit();
       return;
@@ -512,6 +525,16 @@ async function start(): Promise<void> {
     });
     if (response === 0) clipboard.writeText(view.command);
   });
+
+  // Every renderer handler is registered above: the window is already loading and calls them on mount.
+  try {
+    await server.start();
+  } catch (error) {
+    log.error(`ipc server could not listen on ${server.path}`, error);
+  }
+  store.start();
+  setTimeout(() => store.pruneConfig(), 10_000);
+  setInterval(() => store.pruneConfig(), PRUNE_INTERVAL_MS);
   void checkUpdate();
   setInterval(() => void checkUpdate(), UPDATE_CHECK_INTERVAL_MS);
   void probe();

@@ -83,10 +83,25 @@ export function autostartPath(): string {
   return join(config, 'autostart', 'agenttiles.desktop');
 }
 
+/**
+ * The Exec value of a desktop entry (Desktop Entry spec, "The Exec key"): an argument with a reserved character goes
+ * in double quotes with " ` $ \ escaped, a literal % is doubled, and because Exec is a string value, every backslash
+ * is escaped once more and line breaks and tabs become \n, \t and \r.
+ */
+export function execValue(exec: string[]): string {
+  const args = exec.map((arg) => (/[\s"'\\><~|&;$*?#()`]/.test(arg) ? `"${arg.replace(/(["`$\\])/g, '\\$1')}"` : arg));
+  return args
+    .join(' ')
+    .replace(/%/g, '%%')
+    .replace(/\\/g, '\\\\')
+    .replace(/\n/g, '\\n')
+    .replace(/\t/g, '\\t')
+    .replace(/\r/g, '\\r');
+}
+
 /** An XDG desktop entry that starts `exec` (program and arguments) with the desktop session. */
 export function desktopEntry(exec: string[]): string {
-  const field = exec.map((part) => (/[\s"'\\$`]/.test(part) ? `"${part.replace(/(["\\$`])/g, '\\$1')}"` : part)).join(' ');
-  return ['[Desktop Entry]', 'Type=Application', 'Name=AgentTiles', 'Comment=Dashboard for Claude Code sessions', `Exec=${field}`, 'X-GNOME-Autostart-enabled=true', ''].join('\n');
+  return ['[Desktop Entry]', 'Type=Application', 'Name=AgentTiles', 'Comment=Dashboard for Claude Code sessions', `Exec=${execValue(exec)}`, 'X-GNOME-Autostart-enabled=true', ''].join('\n');
 }
 
 export function setAutostart(enabled: boolean, exec: string[]): void {

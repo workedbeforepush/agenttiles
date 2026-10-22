@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import type { ModelUsage } from '../core/types';
 import { claudeDir } from '../core/paths';
 import { addUsage, mergeModelUsage, parseUsageLine, type UsageDay } from '../core/usage';
-import { dateOf } from './daily';
+import { dateOf, dict } from './daily';
 import { log } from './log';
 
 /** Bytes read per step; the scan yields to the event loop between steps. */
@@ -15,6 +15,11 @@ const CHUNK_BYTES = 4 * 1024 * 1024;
 /** Response keys are kept this long for deduplication; copies of older responses are not expected. */
 const SEEN_DAYS = 90;
 const DAY_MS = 86_400_000;
+/**
+ * usage.json is rewritten whole and grows with `seen`: save at most this often while sessions run, and on quit. A
+ * crash in between only means the transcripts are read again from the older offsets, consistent with the older keys.
+ */
+const SAVE_INTERVAL_MS = 10 * 60 * 1000;
 
 interface UsageFile {
   version: 1;
@@ -27,6 +32,16 @@ interface UsageFile {
 
 function empty(): UsageFile {
   return { version: 1, offsets: {}, seen: {}, days: {} };
+}
+
+/** JSON.parse builds plain objects; a project folder named "__proto__" must not reach Object.prototype. */
+function usageDays(raw: Record<string, UsageDay>): Record<string, UsageDay> {
+  return dict(
+    Object.entries(raw).map(([date, day]) => [
+      date,
+      dict(Object.entries(day).map(([project, models]) => [project, dict(Object.entries(models))])),
+    ]),
+  );
 }
 
 /** All transcripts below `root`, subagent transcripts included. */
@@ -42,6 +57,7 @@ export class UsageLog {
   private scanning: Promise<boolean> | null = null;
   /** Offsets or keys changed since the last save. */
   private dirty = false;
+  private savedAt = 0;
 
   constructor(
     dir: string,
@@ -57,7 +73,9 @@ export class UsageLog {
     if (!existsSync(this.path)) return empty();
     try {
       const raw = JSON.parse(readFileSync(this.path, 'utf8')) as Partial<UsageFile> | null;
-      if (raw?.version === 1 && raw.offsets && raw.seen && raw.days) return raw as UsageFile;
+      if (raw?.version === 1 && raw.offsets && raw.seen && raw.days) {
+        return { version: 1, offsets: raw.offsets, seen: raw.seen, days: usageDays(raw.days) };
+      }
     } catch {
       // fall through
     }
@@ -98,8 +116,13 @@ export class UsageLog {
         this.dirty = true;
       }
     }
-    if (this.dirty) this.save();
+    if (this.dirty && this.clock() - this.savedAt >= SAVE_INTERVAL_MS) this.save();
     return changed;
+  }
+
+  /** Saves what the last scans gathered; on quit. */
+  flush(): void {
+    if (this.dirty) this.save();
   }
 
   private async readFile(path: string): Promise<boolean> {
@@ -149,6 +172,7 @@ export class UsageLog {
       writeFileSync(tmp, JSON.stringify(this.data));
       renameSync(tmp, this.path);
       this.dirty = false;
+      this.savedAt = this.clock();
     } catch (error) {
       log.warn(`usage.json could not be written: ${(error as Error).message}`);
     }

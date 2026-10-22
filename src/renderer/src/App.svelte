@@ -224,15 +224,13 @@
     settingsView = await window.agenttiles.closeHookPrompt(forever);
   }
 
-  /** For D (deny): the selected tile when it has a pending permission, otherwise the longest waiting one. */
+  /** For D (deny): the selected tile when it has a pending permission; without one D does nothing. */
   function permissionTarget(): TileView | null {
+    // Only the request the user picked: D never reaches a tile they have not selected.
     // Questions and plans are answered, not denied; D never touches them.
-    const deniable = (t: TileView): boolean => t.pending !== null && t.pending.questions === null && t.pending.plan === null;
     const selected = snapshot.tiles.find((t) => t.sessionId === selectedId);
-    if (selected && deniable(selected)) return selected;
-    const pending = snapshot.tiles.filter(deniable);
-    pending.sort((a, b) => a.stateSince - b.stateSince);
-    return pending[0] ?? null;
+    if (!selected?.pending || selected.pending.questions !== null || selected.pending.plan !== null) return null;
+    return selected;
   }
 
   /** The configured action for a key combo, if enabled. selectTile is matched separately (keys 1–9). */
@@ -311,7 +309,9 @@
     window.agenttiles.onSettingsChanged(() => {
       if (showSettings) void refreshSettings();
     });
-    window.agenttiles.onFullscreen((value) => (fullscreen = value));
+    window.agenttiles.onFullscreen((value) => {
+      fullscreen = value;
+    });
     window.agenttiles.onTransitions(onTransitions);
     window.agenttiles.onUpdate((next) => {
       update = next;

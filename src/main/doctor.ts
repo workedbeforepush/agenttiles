@@ -39,7 +39,13 @@ export async function runDoctor(
   if (existsSync(dir)) {
     for (const name of readdirSync(dir)) {
       if (!isRegistryFileName(name)) continue;
-      const entry = parseRegistryEntry(readFileSync(join(dir, name), 'utf8'));
+      let text: string;
+      try {
+        text = readFileSync(join(dir, name), 'utf8');
+      } catch {
+        continue; // the session ended between listing and reading
+      }
+      const entry = parseRegistryEntry(text);
       if (!entry) continue;
       const agent = bySession.get(entry.sessionId);
       rows.push({

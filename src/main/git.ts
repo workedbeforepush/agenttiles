@@ -3,13 +3,20 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 
+/** A folder outside a repository is looked up again after this long: `git init` or a clone may make it one. */
+const NOT_REPO_RECHECK_MS = 30_000;
+/** Working directories remembered; the oldest goes first, a folder still in use is looked up again. */
+const MAX_CACHED = 200;
+
 interface Cached {
-  headPath: string;
+  /** Null outside a repository. */
+  headPath: string | null;
+  checkedAt: number;
   mtimeMs: number;
   branch: string | null;
 }
 
-const cache = new Map<string, Cached | null>();
+const cache = new Map<string, Cached>();
 
 /** Path of the HEAD file for the repository containing `cwd` (plain repo or worktree), or null outside a repo. */
 function findHead(cwd: string): string | null {
@@ -43,12 +50,13 @@ export function readGitBranch(cwd: string): string | null {
   if (!cwd) return null;
   try {
     let entry = cache.get(cwd);
-    if (entry === undefined) {
-      const headPath = findHead(cwd);
-      entry = headPath ? { headPath, mtimeMs: -1, branch: null } : null;
+    if (entry === undefined || (entry.headPath === null && Date.now() - entry.checkedAt >= NOT_REPO_RECHECK_MS)) {
+      entry = { headPath: findHead(cwd), checkedAt: Date.now(), mtimeMs: -1, branch: null };
+      cache.delete(cwd);
+      if (cache.size >= MAX_CACHED) cache.delete(cache.keys().next().value!);
       cache.set(cwd, entry);
     }
-    if (!entry) return null;
+    if (entry.headPath === null) return null;
     const mtimeMs = statSync(entry.headPath).mtimeMs;
     if (mtimeMs !== entry.mtimeMs) {
       entry.branch = parseHead(readFileSync(entry.headPath, 'utf8'));
