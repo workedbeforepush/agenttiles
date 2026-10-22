@@ -1,6 +1,8 @@
 // Win32 helpers via koffi: process table, process start time, host window lookup and focus.
 import koffi from 'koffi';
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
+import type { TerminalTarget } from '../../core/types';
+import { wtArgs } from './wt';
 
 const kernel32 = koffi.load('kernel32.dll');
 const user32 = koffi.load('user32.dll');
@@ -282,16 +284,15 @@ while ($null -ne ($line = [Console]::In.ReadLine())) {
 }
 `;
 
-/**
- * Opens a new Windows Terminal tab in `cwd` running `command` (in the most recently used window, or a new one).
- * Resolves false when wt.exe could not be started.
- */
-export function openTerminalTab(cwd: string, command: string[], env: NodeJS.ProcessEnv): Promise<boolean> {
-  // wt.exe splits its command line at ';' (subcommand separator) unless it is escaped.
-  // Escape backslashes first so existing escapes cannot alter semicolon escaping.
-  const escape = (arg: string): string => arg.replace(/\\/g, '\\\\').replace(/;/g, '\\;');
+/** Opens `command` in a Windows Terminal tab or window and resolves false if wt.exe could not be started. */
+export function openTerminalTab(
+  cwd: string,
+  command: string[],
+  env: NodeJS.ProcessEnv,
+  target: TerminalTarget,
+): Promise<boolean> {
   return new Promise((resolve) => {
-    const child = spawn('wt.exe', ['-w', '0', 'new-tab', '-d', escape(cwd), ...command.map(escape)], {
+    const child = spawn('wt.exe', wtArgs(cwd, command, target), {
       env,
       detached: true,
       stdio: 'ignore',

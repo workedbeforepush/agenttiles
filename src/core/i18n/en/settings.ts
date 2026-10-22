@@ -31,6 +31,11 @@ export const settings = {
     window: 'Window',
     alwaysOnTop: 'Always on top',
     autostart: 'Start with system login',
+    sessions: 'Sessions',
+    openSessions: 'Open new sessions in',
+    openSessionsHint: 'New and resumed sessions from New session, and background sessions. Windows Terminal and iTerm2; Terminal.app and Linux terminals always open a window.',
+    openInTab: 'New tab',
+    openInWindow: 'New window',
   },
   notifications: {
     toasts: 'Toasts',

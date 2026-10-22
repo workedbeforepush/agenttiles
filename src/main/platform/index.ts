@@ -1,4 +1,5 @@
 // Platform dispatch: Windows (Win32 + Windows Terminal), macOS (Terminal.app / iTerm2) and Linux (X11 + xdotool).
+import type { TerminalTarget } from '../../core/types';
 import { log } from '../log';
 
 type WindowsModule = typeof import('./windows');
@@ -10,6 +11,12 @@ let mac: MacModule | null = null;
 let linux: LinuxModule | null = null;
 /** One UI Automation tab switch at a time; repeated clicks must not pile up PowerShell processes. */
 let selectingTab = false;
+/** Where `openTerminal` opens sessions; follows the setting. */
+let terminalTarget: TerminalTarget = 'tab';
+
+export function setTerminalTarget(target: TerminalTarget): void {
+  terminalTarget = target;
+}
 
 export async function initPlatform(): Promise<void> {
   if (process.platform === 'win32') {
@@ -68,13 +75,13 @@ export function registerAppIdentity(appId: string, displayName: string, iconPath
 }
 
 /**
- * Opens a terminal running a command in `cwd`: a Windows Terminal tab, an iTerm2 / Terminal.app tab, or a window
- * of the first installed Linux terminal.
+ * Opens a terminal running a command in `cwd`: a Windows Terminal or iTerm2 tab or window (the setting), a
+ * Terminal.app window, or a window of the first installed Linux terminal.
  */
 export async function openTerminal(cwd: string, command: string[], env: NodeJS.ProcessEnv): Promise<'opened' | 'failed' | 'unsupported'> {
   let opened: boolean;
-  if (win) opened = await win.openTerminalTab(cwd, command, env);
-  else if (mac) opened = await mac.openTerminalTab(cwd, command);
+  if (win) opened = await win.openTerminalTab(cwd, command, env, terminalTarget);
+  else if (mac) opened = await mac.openTerminalTab(cwd, command, terminalTarget);
   else if (linux) opened = await linux.openTerminalTab(cwd, command, env);
   else return 'unsupported';
   return opened ? 'opened' : 'failed';

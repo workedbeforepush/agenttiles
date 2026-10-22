@@ -6,7 +6,7 @@
 
 <script lang="ts">
   import WithCode from './WithCode.svelte';
-  import type { KeyAction, LogLevel, SettingsPatch, SettingsView, SoundState, ThemeSetting, TileSize } from '../../../core/types';
+  import type { KeyAction, LogLevel, SettingsPatch, SettingsView, SoundState, TerminalTarget, ThemeSetting, TileSize } from '../../../core/types';
   import { SOUND_PRIORITY, playCue } from '../sounds';
   import { acceleratorOf, comboOf, displayCombo, hasModifier } from '../keys';
   import { LOCALE_NAMES, type LanguageSetting } from '../../../core/i18n';
@@ -186,6 +186,17 @@
             <h3>{t('settings.general.window')}</h3>
             {@render toggle(s.alwaysOnTop, checkbox('alwaysOnTop'), t('settings.general.alwaysOnTop'))}
             {@render toggle(s.autostart, checkbox('autostart'), t('settings.general.autostart'))}
+          </section>
+          <section>
+            <h3>{t('settings.general.sessions')}</h3>
+            <div class="field">
+              <span class="text">{t('settings.general.openSessions')}<small>{t('settings.general.openSessionsHint')}</small></span>
+              {@render segment(
+                [['tab', t('settings.general.openInTab')], ['window', t('settings.general.openInWindow')]],
+                s.terminalTarget,
+                (target) => update({ terminalTarget: target as TerminalTarget }),
+              )}
+            </div>
           </section>
         {:else if page === 'notifications'}
           <section>

@@ -38,8 +38,9 @@ describe.skipIf(process.platform !== 'darwin')('AppleScript on macOS', () => {
       const scripts = [
         selectTabScript('Terminal', '/dev/ttys003'),
         selectTabScript('iTerm2', '/dev/ttys003'),
-        openScript('Terminal', "/Users/me/it's \"here\"", ['claude', '--resume', 'abc']),
-        openScript('iTerm2', '/tmp', ['claude']),
+        openScript('Terminal', "/Users/me/it's \"here\"", ['claude', '--resume', 'abc'], 'tab'),
+        openScript('iTerm2', '/tmp', ['claude'], 'tab'),
+        openScript('iTerm2', '/tmp', ['claude'], 'window'),
       ];
       for (const [i, script] of scripts.entries()) {
         // osacompile checks the syntax without running anything (the iTerm2 dictionary is not needed for that:
