@@ -156,5 +156,6 @@ describe('Windows Terminal', () => {
     // wt.exe does not unescape '\\': backslashes must reach it unchanged, or UNC paths break.
     expect(wtArgs('\\\\server\\share\\proj', ['claude'], 'tab')[4]).toBe('\\\\server\\share\\proj');
     expect(wtArgs('C:\\dev\\a;b', ['claude'], 'tab')[4]).toBe('C:\\dev\\a\\;b');
+    expect(wtArgs('C:\\dev\\;x', ['claude'], 'tab')[4]).toBe('C:\\dev\\\\;x');
   });
 });
