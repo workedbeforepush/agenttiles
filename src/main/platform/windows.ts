@@ -252,9 +252,11 @@ export function hwndValue(hwnd: Hwnd): string {
 
 // Runs for the app's lifetime: starting PowerShell and loading UI Automation takes about a second, the tab search
 // itself a few milliseconds. One request per stdin line ({"hwnds": [...], "titles": [...]}), one answer per stdout
-// line: the hwnd whose tab was selected, or an empty line. Ends when stdin closes.
+// line: the hwnd whose tab was selected, or an empty line. Ends when stdin closes. Node writes UTF-8; PowerShell would
+// read stdin in the OEM code page and turn "Wärme" in a title into "WÃ¤rme".
 const SELECT_TAB_SCRIPT = `
 $ErrorActionPreference = 'Stop'
+[Console]::InputEncoding = [System.Text.UTF8Encoding]::new($false)
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
 $cond = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::TabItem)
 while ($null -ne ($line = [Console]::In.ReadLine())) {
@@ -282,10 +284,7 @@ while ($null -ne ($line = [Console]::In.ReadLine())) {
 }
 `;
 
-/**
- * Opens a new Windows Terminal tab in `cwd` running `command` (in the most recently used window, or a new one).
- * Resolves false when wt.exe could not be started.
- */
+/** Opens `command` in a Windows Terminal tab or window and resolves false if wt.exe could not be started. */
 export function openTerminalTab(
   cwd: string,
   command: string[],

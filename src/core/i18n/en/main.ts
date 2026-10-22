@@ -42,6 +42,7 @@ export const main = {
     untitled: 'Untitled session',
     folderNotFound: 'Folder not found: {path}',
     invalidSessionId: 'Invalid session id.',
+    invalidWorktree: 'Not a valid worktree name: {name}. Use letters, digits, . _ / -',
     invalidJobId: 'Invalid background session id.',
     startUnsupported: 'Starting sessions is not supported on this OS.',
     attachUnsupported: 'Opening background sessions is not supported on this OS.',

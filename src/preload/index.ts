@@ -36,7 +36,7 @@ const api: AgentTilesApi = {
   },
   runUpdate: () => ipcRenderer.invoke('update:run'),
   recentSessions: () => ipcRenderer.invoke('sessions:recent'),
-  launchSession: (cwd, sessionId) => ipcRenderer.invoke('sessions:launch', cwd, sessionId),
+  launchSession: (cwd, sessionId, worktree) => ipcRenderer.invoke('sessions:launch', cwd, sessionId, worktree),
   pickFolder: () => ipcRenderer.invoke('dialog:folder'),
   setOrder: (sessionIds) => ipcRenderer.invoke('tiles:order', sessionIds),
   toggleFullscreen: () => ipcRenderer.invoke('window:toggleFullscreen'),
