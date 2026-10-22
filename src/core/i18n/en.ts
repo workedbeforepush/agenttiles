@@ -46,6 +46,7 @@ export const en = {
     show: 'Show',
     settings: 'Settings',
     quit: 'Quit',
+    update: 'Update to {version}…',
   },
   toast: {
     needsApproval: '{name} · needs approval',
@@ -63,6 +64,8 @@ export const en = {
     contextFull: '{name} · context {pct}% full',
     contextFullBody: 'Claude Code compacts the conversation soon. Run /compact at a good point, or /clear for a fresh start.',
     stillWaiting: '{name} · still waiting ({duration})',
+    updateAvailable: 'AgentTiles {version} is available',
+    updateAvailableBody: 'Click to update.',
   },
   app,
   header,

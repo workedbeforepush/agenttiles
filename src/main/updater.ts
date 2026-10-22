@@ -4,11 +4,13 @@ import { execFile, spawn } from 'node:child_process';
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { UpdateView } from '../core/types';
+import type { Translate } from '../core/i18n';
 import { log } from './log';
-import { t } from './i18n';
+import { t as mainT } from './i18n';
 
 export const PACKAGE = 'agenttiles';
 const REGISTRY_URL = `https://registry.npmjs.org/${PACKAGE}/latest`;
+const RELEASES_URL = 'https://github.com/workedbeforepush/agenttiles/releases/tag/';
 const LOG_TAIL_LINES = 6;
 /** x.y.z with an optional pre-release: the version ends up in the update script, so nothing else gets through. */
 const VERSION = /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/;
@@ -36,6 +38,17 @@ export function compareVersions(a: string, b: string): number {
 export function latestVersion(body: unknown): string | null {
   const version = (body as { version?: unknown } | null)?.version;
   return typeof version === 'string' && VERSION.test(version) ? version : null;
+}
+
+/** True when `available` is newer than the version the last update toast announced, or none was announced yet. */
+export function shouldAnnounce(available: string, announced: string | null): boolean {
+  return announced === null || compareVersions(available, announced) > 0;
+}
+
+/** The GitHub release page of `version`; it goes to the browser, so only an x.y.z version gets through. */
+export function releaseUrl(version: string): string {
+  if (!VERSION.test(version)) throw new Error(`not a version: ${version}`);
+  return `${RELEASES_URL}v${version}`;
 }
 
 export function updateCommand(version: string): string {
@@ -83,9 +96,14 @@ interface Marker {
   target: string;
 }
 
+/** A failed update from the previous run: the end of npm's output, or null when npm wrote nothing. */
+interface Failure {
+  output: string | null;
+}
+
 export class Updater {
   private latest: string | null = null;
-  private failed: string | null = null;
+  private failed: Failure | null = null;
   private globalInstall: boolean | null = null;
   private readonly markerPath: string;
 
@@ -109,8 +127,9 @@ export class Updater {
     }
     const logPath = join(this.userData, 'update.log');
     const tail = existsSync(logPath) ? readFileSync(logPath, 'utf8').trim().split(/\r?\n/).slice(-LOG_TAIL_LINES).join('\n') : '';
-    this.failed = tail || t('main.update.npmNoInstall');
-    log.warn(`update to ${marker.target} failed: ${this.failed}`);
+    // Stored untranslated: the fallback text is built in view() and follows a language switch.
+    this.failed = { output: tail || null };
+    log.warn(`update to ${marker.target} failed: ${tail || 'no npm output'}`);
   }
 
   /** Asks the registry for the latest version. Network errors only mean "nothing new" until the next check. */
@@ -139,14 +158,14 @@ export class Updater {
     }
   }
 
-  view(): UpdateView {
+  view(t: Translate = mainT): UpdateView {
     const available = this.latest !== null && compareVersions(this.latest, this.current) > 0 ? this.latest : null;
     return {
       current: this.current,
       available,
       command: updateCommand(available ?? 'latest'),
       canInstall: this.globalInstall === true,
-      failed: this.failed,
+      failed: this.failed ? (this.failed.output ?? t('main.update.npmNoInstall')) : null,
     };
   }
 

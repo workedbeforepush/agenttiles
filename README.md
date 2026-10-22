@@ -91,7 +91,7 @@ agenttiles
 ```
 
 The `agenttiles` command starts the app and returns right away; the terminal can be closed. The very first start
-downloads Electron (about 100 MB) and takes a little longer. Run it again to bring the window to the front. AgentTiles checks npm for new versions and offers **Update and restart** in its header.
+downloads Electron (about 100 MB) and takes a little longer. Run it again to bring the window to the front. AgentTiles checks npm for new versions, announces each one with a toast and offers **Update and restart** in its header and tray menu, with a link to the release notes.
 
 The first start opens a one-minute tour of the dashboard (Settings replays it). It ends by offering the **hooks** and
 the **statusline wrapper** in `~/.claude/settings.json`; while they are not installed, AgentTiles asks again at start

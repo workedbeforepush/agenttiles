@@ -295,7 +295,7 @@ export interface UpdateView {
   command: string;
   /** True for a global npm install: AgentTiles runs the update itself. */
   canInstall: boolean;
-  /** The end of npm's output when the last update from the app failed. */
+  /** The end of npm's output (or a note that npm wrote none) when the last update from the app failed. */
   failed: string | null;
 }
 

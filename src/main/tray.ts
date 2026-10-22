@@ -14,11 +14,14 @@ export interface TrayActions {
   toggle(): void;
   show(): void;
   settings(): void;
+  update(): void;
   quit(): void;
 }
 
 export class AppTray {
   private readonly tray: Tray;
+  /** The newer version the menu offers, or null. */
+  private update: string | null = null;
 
   constructor(private readonly actions: TrayActions) {
     this.tray = new Tray(placeholderIcon());
@@ -33,10 +36,18 @@ export class AppTray {
       Menu.buildFromTemplate([
         { label: t('tray.show'), click: () => this.actions.show() },
         { label: t('tray.settings'), click: () => this.actions.settings() },
+        ...(this.update ? [{ label: t('tray.update', { version: this.update }), click: () => this.actions.update() }] : []),
         { type: 'separator' },
         { label: t('tray.quit'), click: () => this.actions.quit() },
       ]),
     );
+  }
+
+  /** Offers `version` in the menu while it is newer than the running one; null removes the item. */
+  setUpdate(version: string | null): void {
+    if (version === this.update) return;
+    this.update = version;
+    this.updateMenu();
   }
 
   setIcon(image: NativeImage, tooltip: string): void {

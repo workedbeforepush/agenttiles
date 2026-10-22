@@ -60,6 +60,11 @@ export function nudgeText(nudge: Nudge, now: number, t: Translate = mainT): { ti
   return { title: t('toast.stillWaiting', { name: tile.name, duration: durationText(now - tile.stateSince, t) }), body };
 }
 
+/** Toast text of a newer AgentTiles version. */
+export function updateText(version: string, t: Translate = mainT): { title: string; body: string } {
+  return { title: t('toast.updateAvailable', { version }), body: t('toast.updateAvailableBody') };
+}
+
 export class Notifier {
   private readonly last = new Map<string, number>();
 
@@ -91,6 +96,14 @@ export class Notifier {
       const { title, body } = nudgeText(nudge, now);
       this.show(title, body, true, () => this.onClick(nudge.tile.sessionId));
     }
+  }
+
+  /** Toast for a newer version, also while the window has focus; false when none was shown (toasts off or unsupported). */
+  update(version: string, onClick: () => void): boolean {
+    if (!this.settings().toasts || !Notification.isSupported()) return false;
+    const { title, body } = updateText(version);
+    this.show(title, body, true, onClick);
+    return true;
   }
 
   /** Plain informational toast, e.g. "not supported on this OS". */
