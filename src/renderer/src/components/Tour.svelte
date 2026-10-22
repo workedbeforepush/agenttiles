@@ -1,5 +1,7 @@
 <script lang="ts">
+  import WithCode from './WithCode.svelte';
   import { onMount, tick } from 'svelte';
+  import { t } from '../i18n.svelte';
 
   interface Props {
     /** The last step offers the hooks while they are missing. */
@@ -12,72 +14,23 @@
   let { hooksInstalled, installing, onInstall, onDone }: Props = $props();
 
   interface Step {
+    id: 'welcome' | 'counters' | 'banner' | 'tile' | 'approve' | 'limits' | 'today' | 'newSession' | 'settings' | 'done';
     icon: string;
-    title: string;
-    body: string;
     /** CSS selector of the element to spotlight; none for the centered welcome and finish cards. */
     target?: string;
   }
 
   const STEPS: Step[] = [
-    {
-      icon: '👋',
-      title: 'Welcome to AgentTiles',
-      body: 'Every Claude Code session on one screen, so nothing ever waits on you unnoticed. Take the one-minute tour: the sessions you see now are made up, your real ones are untouched.',
-    },
-    {
-      icon: '🚦',
-      title: 'Status at a glance',
-      body: 'How many sessions are working, waiting for you or done. Click a counter to show only those tiles; click more to combine.',
-      target: '[aria-label="Filter by state"]',
-    },
-    {
-      icon: '🙋',
-      title: 'Never miss a waiting session',
-      body: 'Approvals, questions and plans line up here, longest waiting first. Press 1–9 to pick one, Enter to answer or jump, D to deny.',
-      target: 'section.banner',
-    },
-    {
-      icon: '🧩',
-      title: 'One tile per session',
-      body: 'Live activity, the last prompt and reply, branch, context and cost. Click a tile to land right in its terminal tab, click again to send it back.',
-      target: '.tile',
-    },
-    {
-      icon: '✅',
-      title: 'Approve right here',
-      body: 'See exactly what Claude wants to run or change, open the diff, then Allow, Always or Deny. Approving is always a deliberate click, never a stray key press.',
-      target: '.tile .actions',
-    },
-    {
-      icon: '⏳',
-      title: 'Stay ahead of your limits',
-      body: 'Your 5-hour and weekly plan usage, with a heads-up when the current pace would hit the limit before it resets. Click to check now.',
-      target: '.group.limits',
-    },
-    {
-      icon: '📊',
-      title: 'Know what your day is worth',
-      body: 'API-equivalent cost today. Click it for stats per day, project and model, read straight from your transcripts.',
-      target: '.item.today',
-    },
-    {
-      icon: '🚀',
-      title: 'Start or pick up work',
-      body: 'Open a new session in any recent project, or resume one that ended, in a fresh terminal tab.',
-      target: '[aria-label="New session"]',
-    },
-    {
-      icon: '⚙️',
-      title: 'Make it yours',
-      body: 'Tile size, sounds, keys, theme and more. This tour waits in Settings whenever you want to see it again.',
-      target: '[aria-label="Settings"]',
-    },
-    {
-      icon: '🎉',
-      title: "You're all set!",
-      body: '',
-    },
+    { id: 'welcome', icon: '👋' },
+    { id: 'counters', icon: '🚦', target: '[data-tour="counters"]' },
+    { id: 'banner', icon: '🙋', target: 'section.banner' },
+    { id: 'tile', icon: '🧩', target: '.tile' },
+    { id: 'approve', icon: '✅', target: '.tile .actions' },
+    { id: 'limits', icon: '⏳', target: '.group.limits' },
+    { id: 'today', icon: '📊', target: '.item.today' },
+    { id: 'newSession', icon: '🚀', target: '[data-tour="newSession"]' },
+    { id: 'settings', icon: '⚙️', target: '[data-tour="settings"]' },
+    { id: 'done', icon: '🎉' },
   ];
   const LAST = STEPS.length - 1;
   /** Space around the spotlighted element and between it and the card. */
@@ -152,7 +105,7 @@
   }));
 </script>
 
-<div class="tour" role="dialog" aria-modal="true" aria-label="Welcome tour">
+<div class="tour" role="dialog" aria-modal="true" aria-label={t('tour.label')}>
   {#if spot}
     <div class="spot" style:left="{spot.x}px" style:top="{spot.y}px" style:width="{spot.w}px" style:height="{spot.h}px"></div>
   {:else}
@@ -177,45 +130,39 @@
     {#key index}
       <div class="content">
         <div class="icon">{step.icon}</div>
-        <h2>{step.title}</h2>
-        {#if index === LAST}
+        <h2>{t(`tour.steps.${step.id}.title`)}</h2>
+        {#if step.id === 'done'}
           {#if hooksInstalled}
-            <p>AgentTiles is connected to Claude Code. Now go build something great.</p>
+            <p>{t('tour.steps.done.connected')}</p>
           {:else}
-            <p>
-              One last step: connect AgentTiles to Claude Code. The hooks bring live tool activity and Allow / Deny on
-              tiles, the statusline wrapper adds cost, context and plan limits.
-            </p>
-            <p class="hint">
-              They go into <code>~/.claude/settings.json</code>; your own hooks and statusline keep working. Settings
-              can install or remove them any time.
-            </p>
+            <p>{t('tour.steps.done.connect')}</p>
+            <p class="hint"><WithCode text={t('tour.steps.done.connectHint')} codes={{ file: '~/.claude/settings.json' }} /></p>
           {/if}
         {:else}
-          <p>{step.body}</p>
+          <p>{t(`tour.steps.${step.id}.body`)}</p>
         {/if}
       </div>
     {/key}
 
     <div class="foot">
-      <div class="dots" aria-label="Step {index + 1} of {STEPS.length}">
+      <div class="dots" aria-label={t('tour.stepOf', { step: index + 1, count: STEPS.length })}>
         {#each STEPS as _, i (i)}
-          <button class="dot" class:active={i === index} class:seen={i < index} onclick={() => go(i)} aria-label="Step {i + 1}"></button>
+          <button class="dot" class:active={i === index} class:seen={i < index} onclick={() => go(i)} aria-label={t('tour.step', { step: i + 1 })}></button>
         {/each}
       </div>
       <div class="buttons">
         {#if index === 0}
-          <button class="secondary" onclick={() => go(LAST)}>Skip</button>
-          <button class="primary" onclick={() => go(1)}>Show me around →</button>
+          <button class="secondary" onclick={() => go(LAST)}>{t('tour.skip')}</button>
+          <button class="primary" onclick={() => go(1)}>{t('tour.start')}</button>
         {:else if index < LAST}
-          <button class="secondary" onclick={() => go(index - 1)}>Back</button>
-          <button class="primary" onclick={() => go(index + 1)}>Next →</button>
+          <button class="secondary" onclick={() => go(index - 1)}>{t('tour.back')}</button>
+          <button class="primary" onclick={() => go(index + 1)}>{t('tour.next')}</button>
         {:else if hooksInstalled}
-          <button class="primary" onclick={onDone}>Let's go 🚀</button>
+          <button class="primary" onclick={onDone}>{t('tour.letsGo')}</button>
         {:else}
-          <button class="secondary" disabled={installing} onclick={onDone}>Not now</button>
+          <button class="secondary" disabled={installing} onclick={onDone}>{t('tour.notNow')}</button>
           <button class="primary" disabled={installing} onclick={onInstall}>
-            {installing ? 'Installing…' : 'Install hooks and statusline'}
+            {installing ? t('tour.installing') : t('tour.install')}
           </button>
         {/if}
       </div>

@@ -3,6 +3,7 @@ import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse, stringify } from 'smol-toml';
 import type { KeyAction, KeyBinding, LogLevel, Settings, SoundState, ThemeSetting, TileSize, ViewMode } from '../core/types';
+import { isLocale } from '../core/i18n';
 
 export interface WindowBounds {
   x: number;
@@ -52,6 +53,7 @@ export const DEFAULT_SETTINGS: Settings = {
   reduceMotion: false,
   tileSize: 'M',
   groupByProject: false,
+  language: 'system',
 };
 
 const THEMES: ThemeSetting[] = ['system', 'dark', 'light'];
@@ -119,6 +121,7 @@ export function normaliseSettings(raw: Record<string, unknown>): Settings {
     reduceMotion: bool(raw['reduceMotion'], d.reduceMotion),
     tileSize: TILE_SIZES.includes(raw['tileSize'] as TileSize) ? (raw['tileSize'] as TileSize) : d.tileSize,
     groupByProject: bool(raw['groupByProject'], d.groupByProject),
+    language: raw['language'] === 'system' || isLocale(raw['language']) ? raw['language'] : d.language,
   };
 }
 

@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { DaySummary, ProjectDay, StatsView, TodayView } from '../../../core/types';
-  import { USAGE_COST_HINT, duration, tokenCount, usd } from '../format';
+  import { duration, tokenCount, usd } from '../format';
+  import { locale, t } from '../i18n.svelte';
 
   interface Props {
     today: TodayView;
@@ -64,11 +65,13 @@
 
   function label(date: string): string {
     const [y, m, d] = date.split('-').map(Number);
-    return new Date(y!, m! - 1, d!).toLocaleDateString([], { month: 'short', day: 'numeric' });
+    return new Date(y!, m! - 1, d!).toLocaleDateString(locale(), { month: 'short', day: 'numeric' });
   }
 
   function hours(value: number): string {
-    return value === 0 ? '0' : `${value.toFixed(value < 10 ? 1 : 0)} h`;
+    const digits = value < 10 ? 1 : 0;
+    const text = new Intl.NumberFormat(locale(), { minimumFractionDigits: digits, maximumFractionDigits: digits, useGrouping: false }).format(value);
+    return value === 0 ? '0' : t('stats.hours', { value: text });
   }
 
   /** A clean axis maximum: 1, 2 or 5 times a power of ten, at least the largest value. */
@@ -101,7 +104,7 @@
           <div
             class="slot"
             role="listitem"
-            aria-label="{label(days[i]?.date ?? '')}: {format(value)}"
+            aria-label={t('stats.barLabel', { date: label(days[i]?.date ?? ''), value: format(value) })}
             onmouseenter={() => (hover = { chart: id, index: i })}
           >
             <span class="bar" class:active={hover?.chart === id && hover.index === i} style:height="{(value / max) * 100}%"></span>
@@ -126,44 +129,49 @@
 <div class="backdrop" onclick={onClose}>
   <div class="panel" onclick={(e) => e.stopPropagation()}>
     <div class="head">
-      <h2>Stats</h2>
+      <h2>{t('stats.title')}</h2>
       <div class="tabs" role="tablist">
-        {#each [['today', 'Today'], [7, '7 days'], [30, '30 days']] as const as [value, text] (value)}
-          <button role="tab" aria-selected={range === value} class:active={range === value} onclick={() => pick(value)}>{text}</button>
+        {#each ['today', 7, 30] as const as value (value)}
+          <button role="tab" aria-selected={range === value} class:active={range === value} onclick={() => pick(value)}>
+            {value === 'today' ? t('stats.range.today') : t('stats.range.days', { count: value })}
+          </button>
         {/each}
       </div>
-      <button onclick={onClose} aria-label="Close">✕</button>
+      <button onclick={onClose} aria-label={t('stats.close')}>✕</button>
     </div>
 
     {#if range === 'today'}
       <div class="grid">
-        <div class="stat"><b>{today.sessions}</b><span>sessions</span></div>
-        <div class="stat"><b>{today.turns}</b><span>prompts</span></div>
-        <div class="stat" style:--c="var(--st-working)"><b>{duration(today.workingMs)}</b><span>Claude working</span></div>
-        <div class="stat" style:--c="var(--st-needsApproval)"><b>{duration(today.waitingMs)}</b><span>waiting for you</span></div>
-        <div class="stat" title={USAGE_COST_HINT}><b>{usd(today.costUsd)}</b><span>API-equivalent</span></div>
+        <div class="stat"><b>{today.sessions}</b><span>{t('stats.sessions', { count: today.sessions })}</span></div>
+        <div class="stat"><b>{today.turns}</b><span>{t('stats.prompts', { count: today.turns })}</span></div>
+        <div class="stat" style:--c="var(--st-working)"><b>{duration(today.workingMs)}</b><span>{t('stats.claudeWorking')}</span></div>
+        <div class="stat" style:--c="var(--st-needsApproval)"><b>{duration(today.waitingMs)}</b><span>{t('stats.waitingForYou')}</span></div>
+        <div class="stat" title={t('format.usageCostHint')}><b>{usd(today.costUsd)}</b><span>{t('stats.apiEquivalent')}</span></div>
       </div>
-      <p class="hint">
-        Working and waiting time add up across sessions, so they can exceed the wall clock. Prompts are counted from
-        hook events only.
-      </p>
+      <p class="hint">{t('stats.todayHint')}</p>
     {:else if failed}
-      <p class="hint">Stats could not be loaded.</p>
+      <p class="hint">{t('stats.loadFailed')}</p>
     {:else if stats}
       <div class="grid">
-        <div class="stat" title={USAGE_COST_HINT}><b>{usd(totals.cost)}</b><span>API-equivalent</span></div>
-        <div class="stat"><b>{totals.turns}</b><span>prompts</span></div>
-        <div class="stat" style:--c="var(--st-working)"><b>{duration(totals.working)}</b><span>Claude working</span></div>
-        <div class="stat" style:--c="var(--st-needsApproval)"><b>{duration(totals.waiting)}</b><span>waiting for you</span></div>
+        <div class="stat" title={t('format.usageCostHint')}><b>{usd(totals.cost)}</b><span>{t('stats.apiEquivalent')}</span></div>
+        <div class="stat"><b>{totals.turns}</b><span>{t('stats.prompts', { count: totals.turns })}</span></div>
+        <div class="stat" style:--c="var(--st-working)"><b>{duration(totals.working)}</b><span>{t('stats.claudeWorking')}</span></div>
+        <div class="stat" style:--c="var(--st-needsApproval)"><b>{duration(totals.waiting)}</b><span>{t('stats.waitingForYou')}</span></div>
       </div>
       <div class="charts">
-        {@render chart('cost', 'API-equivalent cost per day', days.map(dayCost), usd)}
-        {@render chart('working', 'Claude working per day', days.map((d) => dayWorking(d) / 3_600_000), hours)}
+        {@render chart('cost', t('stats.costPerDay'), days.map(dayCost), usd)}
+        {@render chart('working', t('stats.workingPerDay'), days.map((d) => dayWorking(d) / 3_600_000), hours)}
       </div>
       {#if projects.length > 0}
         <table>
           <thead>
-            <tr><th>Project</th><th>Cost</th><th>Prompts</th><th>Working</th><th>Waiting</th></tr>
+            <tr>
+              <th>{t('stats.column.project')}</th>
+              <th>{t('stats.column.cost')}</th>
+              <th>{t('stats.column.prompts')}</th>
+              <th>{t('stats.column.working')}</th>
+              <th>{t('stats.column.waiting')}</th>
+            </tr>
           </thead>
           <tbody>
             {#each projects as [name, p] (name)}
@@ -178,12 +186,19 @@
           </tbody>
         </table>
       {:else}
-        <p class="hint">No activity in this range yet.</p>
+        <p class="hint">{t('stats.noActivity')}</p>
       {/if}
       {#if models.length > 0}
         <table>
           <thead>
-            <tr><th>Model</th><th>Input</th><th>Output</th><th>Cache write</th><th>Cache read</th><th>Cost</th></tr>
+            <tr>
+              <th>{t('stats.column.model')}</th>
+              <th>{t('stats.column.input')}</th>
+              <th>{t('stats.column.output')}</th>
+              <th>{t('stats.column.cacheWrite')}</th>
+              <th>{t('stats.column.cacheRead')}</th>
+              <th>{t('stats.column.cost')}</th>
+            </tr>
           </thead>
           <tbody>
             {#each models as [name, m] (name)}
@@ -193,17 +208,16 @@
                 <td>{tokenCount(m.outputTokens)}</td>
                 <td>{tokenCount(m.cacheWriteTokens)}</td>
                 <td>{tokenCount(m.cacheReadTokens)}</td>
-                <td title={m.costUsd === null ? 'No price known for this model' : undefined}>{m.costUsd === null ? '–' : usd(m.costUsd)}</td>
+                <td title={m.costUsd === null ? t('stats.noPrice') : undefined}>{m.costUsd === null ? '–' : usd(m.costUsd)}</td>
               </tr>
             {/each}
           </tbody>
         </table>
       {/if}
       <p class="hint">
-        Cost comes from the session transcripts; prompts and times are recorded while AgentTiles runs{#if before}, data
-          starts on {label(before)}{/if}.
-        <button class="link" onclick={exportCsv}>Export CSV</button>
-        {#if exported}<span class="saved">Saved to {exported}</span>{/if}
+        {before ? t('stats.sourceSince', { date: label(before) }) : t('stats.source')}
+        <button class="link" onclick={exportCsv}>{t('stats.exportCsv')}</button>
+        {#if exported}<span class="saved">{t('stats.savedTo', { path: exported })}</span>{/if}
       </p>
     {/if}
   </div>

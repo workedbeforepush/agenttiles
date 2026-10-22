@@ -5,6 +5,7 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { UpdateView } from '../core/types';
 import { log } from './log';
+import { t } from './i18n';
 
 export const PACKAGE = 'agenttiles';
 const REGISTRY_URL = `https://registry.npmjs.org/${PACKAGE}/latest`;
@@ -92,7 +93,7 @@ export class Updater {
     }
     const logPath = join(this.userData, 'update.log');
     const tail = existsSync(logPath) ? readFileSync(logPath, 'utf8').trim().split(/\r?\n/).slice(-LOG_TAIL_LINES).join('\n') : '';
-    this.failed = tail || 'npm did not install the update.';
+    this.failed = tail || t('main.update.npmNoInstall');
     log.warn(`update to ${marker.target} failed: ${this.failed}`);
   }
 

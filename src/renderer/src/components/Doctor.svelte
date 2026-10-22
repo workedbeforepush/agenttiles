@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { DoctorReport } from '../../../core/types';
+  import { t } from '../i18n.svelte';
 
   interface Props {
     onClose: () => void;
@@ -32,43 +33,54 @@
 <div class="backdrop" onclick={onClose}>
   <div class="panel" onclick={(e) => e.stopPropagation()}>
     <div class="head">
-      <h2>Diagnostics</h2>
+      <h2>{t('doctor.title')}</h2>
       <div>
-        <button onclick={load} disabled={loading}>{loading ? 'Running…' : 'Refresh'}</button>
-        <button onclick={onClose} aria-label="Close">✕</button>
+        <button onclick={load} disabled={loading}>{loading ? t('doctor.running') : t('doctor.refresh')}</button>
+        <button onclick={onClose} aria-label={t('doctor.close')}>✕</button>
       </div>
     </div>
     {#if failure}<p class="bad">{failure}</p>{/if}
     {#if report}
       <dl>
-        <dt>Claude Code</dt>
-        <dd>{report.claudeVersion ?? 'not found in PATH'}</dd>
-        <dt>IPC server</dt>
-        <dd class={report.ipcListening ? 'good' : 'bad'}>{report.ipcListening ? 'listening' : 'not listening'} · {report.ipcPath}</dd>
-        <dt>Hooks</dt>
-        <dd class={report.integration.hooksInstalled ? 'good' : 'bad'}>{report.integration.hooksInstalled ? 'installed' : 'not installed'}</dd>
-        <dt>Statusline</dt>
-        <dd class={report.integration.statuslineInstalled ? 'good' : 'bad'}>{report.integration.statuslineInstalled ? 'installed' : 'not installed'}</dd>
-        <dt>Node.js</dt>
+        <dt>{t('doctor.claudeCode')}</dt>
+        <dd>{report.claudeVersion ?? t('doctor.claudeNotFound')}</dd>
+        <dt>{t('doctor.ipcServer')}</dt>
+        <dd class={report.ipcListening ? 'good' : 'bad'}>{report.ipcListening ? t('doctor.listening') : t('doctor.notListening')} · {report.ipcPath}</dd>
+        <dt>{t('doctor.hooks')}</dt>
+        <dd class={report.integration.hooksInstalled ? 'good' : 'bad'}>
+          {report.integration.hooksInstalled ? t('doctor.installed') : t('doctor.notInstalled')}
+        </dd>
+        <dt>{t('doctor.statusline')}</dt>
+        <dd class={report.integration.statuslineInstalled ? 'good' : 'bad'}>
+          {report.integration.statuslineInstalled ? t('doctor.installed') : t('doctor.notInstalled')}
+        </dd>
+        <dt>{t('doctor.nodeJs')}</dt>
         <dd>{report.integration.nodePath ?? '–'}</dd>
-        <dt>Other claude processes</dt>
+        <dt>{t('doctor.otherProcesses')}</dt>
         <dd>
           {#if report.unregisteredPids === null}
-            not available on this OS
+            {t('doctor.notAvailable')}
           {:else if report.unregisteredPids.length === 0}
-            none
+            {t('doctor.none')}
           {:else}
-            {report.unregisteredPids.join(', ')} <small>(no registry entry: print mode, background workers or a crashed session)</small>
+            {report.unregisteredPids.join(', ')} <small>{t('doctor.unregisteredHint')}</small>
           {/if}
         </dd>
         {#if report.agentsError}
-          <dt>claude agents</dt>
+          <dt>{t('doctor.claudeAgents')}</dt>
           <dd class="bad">{report.agentsError}</dd>
         {/if}
       </dl>
       <table>
         <thead>
-          <tr><th>PID</th><th>Name</th><th>Registry</th><th>claude agents</th><th>Alive</th><th>Shown</th></tr>
+          <tr>
+            <th>{t('doctor.column.pid')}</th>
+            <th>{t('doctor.column.name')}</th>
+            <th>{t('doctor.column.registry')}</th>
+            <th>{t('doctor.column.claudeAgents')}</th>
+            <th>{t('doctor.column.alive')}</th>
+            <th>{t('doctor.column.shown')}</th>
+          </tr>
         </thead>
         <tbody>
           {#each report.rows as row (row.pid)}
@@ -77,11 +89,11 @@
               <td title={row.sessionId}>{row.name}</td>
               <td>{row.registryStatus}</td>
               <td>{row.agentsStatus ?? '–'}</td>
-              <td class={row.alive ? 'good' : 'bad'}>{row.alive ? 'yes' : 'no'}</td>
-              <td>{row.shown ? 'yes' : 'no'}</td>
+              <td class={row.alive ? 'good' : 'bad'}>{row.alive ? t('doctor.yes') : t('doctor.no')}</td>
+              <td>{row.shown ? t('doctor.yes') : t('doctor.no')}</td>
             </tr>
           {:else}
-            <tr><td colspan="6">No registry entries.</td></tr>
+            <tr><td colspan="6">{t('doctor.noEntries')}</td></tr>
           {/each}
         </tbody>
       </table>

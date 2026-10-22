@@ -14,6 +14,7 @@ export function settingsView(): SettingsView {
     integration: { hooksInstalled: true, statuslineInstalled: true, nodePath: 'C:\\Program Files\\nodejs\\node.exe', error: null },
     askHooks: false,
     showTour: false,
+    locale: 'en',
     platform: 'win32',
   };
 }

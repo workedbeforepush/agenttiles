@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { DiffLine } from '../../../core/types';
+  import { t } from '../i18n.svelte';
 
   interface Props {
     lines: DiffLine[];
@@ -18,7 +19,7 @@
     <div class="line {line.kind}"><span class="mark">{MARK[line.kind]}</span><span class="text">{line.text}</span></div>
   {/each}
   {#if limit !== undefined && lines.length > limit}
-    <div class="line skip"><span class="mark">⋯</span><span class="text">{lines.length - limit} more lines</span></div>
+    <div class="line skip"><span class="mark">⋯</span><span class="text">{t('tile.diffLines.more', { count: lines.length - limit })}</span></div>
   {/if}
 </div>
 

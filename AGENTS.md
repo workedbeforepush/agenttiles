@@ -43,6 +43,10 @@ macOS and Linux are experimental. The README has the feature overview; this file
   returns the reactive proxy, which contextBridge fails to clone.
 - `npm run typecheck` runs TypeScript 7 (`@typescript/native`) and svelte-check. The `typescript` package is
   TypeScript 6 on purpose: svelte-check needs it next to 7.
+- Every text a user sees goes through `t()` (renderer: `i18n.svelte.ts`, main: `src/main/i18n.ts`) with a key from
+  `src/core/i18n/en.ts` / `en/<area>.ts`; English is the source, other locales copy its shape. One message per
+  sentence with `{placeholders}`, plural objects for counts, code inside a sentence via `WithCode.svelte`. The core
+  hands out keys and structured values (`StateLabel`, `Activity`), never English.
 - UI changes: run `npm run screenshots` and commit the updated `docs/images` when a README image changes. The
   script renders the real UI offscreen with demo data and is also the CI smoke test.
 

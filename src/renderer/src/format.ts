@@ -1,36 +1,20 @@
 import type { SessionState } from '../../core/types';
+import { durationText } from '../../core/i18n/view';
 import appIconUrl from '../../../resources/icon.png';
+import { locale, t } from './i18n.svelte';
 
 export function since(fromMs: number, nowMs: number): string {
-  const seconds = Math.max(0, Math.floor((nowMs - fromMs) / 1000));
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ${minutes % 60}m`;
-  return `${Math.floor(hours / 24)}d ${hours % 24}h`;
+  return durationText(nowMs - fromMs, t);
 }
-
-export const COST_HINT =
-  'Token usage priced at API list prices, as reported by the Claude Code statusline. Not billed on a Claude subscription.';
-
-export const USAGE_COST_HINT =
-  'Token usage from the session transcripts, priced at API list prices. Not billed on a Claude subscription.';
 
 /** Token count as "950", "12.3k", "4.1M". */
 export function tokenCount(value: number): string {
-  if (value < 1000) return String(value);
-  if (value < 1_000_000) return `${(value / 1000).toFixed(value < 10_000 ? 1 : 0)}k`;
-  return `${(value / 1_000_000).toFixed(value < 10_000_000 ? 1 : 0)}M`;
+  return new Intl.NumberFormat(locale(), { notation: 'compact', maximumFractionDigits: value < 10_000 || (value >= 1e6 && value < 1e7) ? 1 : 0 }).format(value);
 }
 
 export function usd(value: number): string {
-  return value < 10 ? `$${value.toFixed(2)}` : `$${value.toFixed(1)}`;
-}
-
-export function resetsIn(epochSeconds: number | null, nowMs: number): string {
-  if (epochSeconds === null) return '';
-  return `resets in ${since(nowMs, epochSeconds * 1000)}`;
+  const digits = value < 10 ? 2 : 1;
+  return new Intl.NumberFormat(locale(), { style: 'currency', currency: 'USD', minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value);
 }
 
 /** Duration as "45s", "12m", "2h 5m". */
@@ -40,7 +24,7 @@ export function duration(ms: number): string {
 
 /** Local clock time "14:20". */
 export function clock(epochMs: number): string {
-  return new Date(epochMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return new Date(epochMs).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
 }
 
 export const NEEDS_YOU: SessionState[] = ['needsApproval', 'needsInput'];

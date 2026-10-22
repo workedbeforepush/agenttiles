@@ -5,19 +5,14 @@
 </script>
 
 <script lang="ts">
+  import WithCode from './WithCode.svelte';
   import type { KeyAction, LogLevel, SettingsPatch, SettingsView, SoundState, ThemeSetting, TileSize } from '../../../core/types';
   import { SOUND_PRIORITY, playCue } from '../sounds';
   import { acceleratorOf, comboOf, displayCombo, hasModifier } from '../keys';
+  import { LOCALE_NAMES, type LanguageSetting } from '../../../core/i18n';
+  import { t } from '../i18n.svelte';
 
-  const KEY_LABELS: { action: KeyAction; label: string }[] = [
-    { action: 'selectTile', label: 'Select tile' },
-    { action: 'jump', label: 'Jump to terminal / answer question' },
-    { action: 'deny', label: 'Deny the waiting request' },
-    { action: 'escape', label: 'Clear selection / leave full screen' },
-    { action: 'fullscreen', label: 'Full screen' },
-    { action: 'nextPage', label: 'Next page' },
-    { action: 'prevPage', label: 'Previous page' },
-  ];
+  const KEY_ACTIONS: KeyAction[] = ['selectTile', 'jump', 'deny', 'escape', 'fullscreen', 'nextPage', 'prevPage'];
 
   /** Which field records the next key press: an action or the global hotkey. */
   let recording = $state<KeyAction | 'global' | null>(null);
@@ -47,7 +42,7 @@
   const conflicts = $derived.by(() => {
     const keys = view.settings.keys;
     const used = new Map<string, KeyAction[]>();
-    for (const { action } of KEY_LABELS) {
+    for (const action of KEY_ACTIONS) {
       if (action === 'selectTile' || !keys[action].enabled) continue;
       used.set(keys[action].key, [...(used.get(keys[action].key) ?? []), action]);
     }
@@ -57,15 +52,6 @@
     }
     return result;
   });
-
-  const SOUND_LABELS: Record<SoundState, string> = {
-    needsApproval: 'Needs approval',
-    needsInput: 'Question',
-    limitHit: 'Rate limit reached',
-    contextFull: 'Context window filling up',
-    error: 'Error',
-    done: 'Ready (turn finished)',
-  };
 
   interface Props {
     view: SettingsView;
@@ -123,14 +109,7 @@
   const s = $derived(view.settings);
   const i = $derived(view.integration);
 
-  const PAGES: { id: Page; label: string }[] = [
-    { id: 'general', label: 'General' },
-    { id: 'notifications', label: 'Notifications' },
-    { id: 'keyboard', label: 'Keyboard' },
-    { id: 'claude', label: 'Claude Code' },
-    { id: 'hidden', label: 'Hidden' },
-    { id: 'advanced', label: 'Advanced' },
-  ];
+  const PAGES: Page[] = ['general', 'notifications', 'keyboard', 'claude', 'hidden', 'advanced'];
   let page = $state<Page>(lastPage);
 
   function show(next: Page): void {
@@ -139,6 +118,8 @@
   }
 
   const hiddenCount = $derived(view.hiddenSessions.length + view.hiddenProjects.length);
+
+  const languages = $derived<[string, string][]>([['system', t('settings.general.languageSystem')], ...Object.entries(LOCALE_NAMES)]);
 </script>
 
 {#snippet toggle(checked: boolean, onchange: (event: Event) => void, label: string, hint: string = '', disabled: boolean = false)}
@@ -160,58 +141,62 @@
 <div class="backdrop" onclick={onClose}>
   <div class="panel" onclick={(e) => e.stopPropagation()}>
     <div class="head">
-      <h2>Settings</h2>
-      <button class="tour" onclick={onTour}>✨ Replay the tour</button>
-      <button class="close" onclick={onClose} aria-label="Close">✕</button>
+      <h2>{t('settings.title')}</h2>
+      <button class="tour" onclick={onTour}>{t('settings.replayTour')}</button>
+      <button class="close" onclick={onClose} aria-label={t('settings.close')}>✕</button>
     </div>
 
     <div class="body">
-      <nav aria-label="Settings pages">
-        {#each PAGES as p (p.id)}
-          <button class:active={page === p.id} aria-current={page === p.id ? 'page' : undefined} onclick={() => show(p.id)}>
-            {p.label}
-            {#if p.id === 'hidden' && hiddenCount > 0}<span class="badge">{hiddenCount}</span>{/if}
-            {#if p.id === 'claude' && !i.hooksInstalled}<span class="badge warn" title="Hooks not installed">!</span>{/if}
+      <nav aria-label={t('settings.pagesLabel')}>
+        {#each PAGES as p (p)}
+          <button class:active={page === p} aria-current={page === p ? 'page' : undefined} onclick={() => show(p)}>
+            {t(`settings.pages.${p}`)}
+            {#if p === 'hidden' && hiddenCount > 0}<span class="badge">{hiddenCount}</span>{/if}
+            {#if p === 'claude' && !i.hooksInstalled}<span class="badge warn" title={t('settings.hooksMissing')}>!</span>{/if}
           </button>
         {/each}
-        <span class="version">AgentTiles {view.version}</span>
+        <span class="version">{t('settings.version', { version: view.version })}</span>
       </nav>
 
       <div class="page">
-        {#if saveError}<p class="error">Could not save: {saveError}</p>{/if}
+        {#if saveError}<p class="error">{t('settings.saveError', { error: saveError })}</p>{/if}
 
         {#if page === 'general'}
           <section>
-            <h3>Appearance</h3>
+            <h3>{t('settings.general.appearance')}</h3>
             <div class="field">
-              <span class="text">Theme</span>
+              <span class="text">{t('settings.general.language')}</span>
+              {@render segment(languages, s.language, (language) => update({ language: language as LanguageSetting }))}
+            </div>
+            <div class="field">
+              <span class="text">{t('settings.general.theme')}</span>
               {@render segment(
-                [['system', 'System'], ['dark', 'Dark'], ['light', 'Light']],
+                [['system', t('settings.general.themeSystem')], ['dark', t('settings.general.themeDark')], ['light', t('settings.general.themeLight')]],
                 s.theme,
                 (theme) => update({ theme: theme as ThemeSetting }),
               )}
             </div>
             <div class="field">
-              <span class="text">Tile size<small>All tiles share one size; more sessions than fit go to further pages.</small></span>
+              <span class="text">{t('settings.general.tileSize')}<small>{t('settings.general.tileSizeHint')}</small></span>
               {@render segment([['S', 'S'], ['M', 'M'], ['L', 'L']], s.tileSize, (size) => update({ tileSize: size as TileSize }))}
             </div>
-            {@render toggle(s.reduceMotion, checkbox('reduceMotion'), 'Reduce motion', 'No blinking or pulsing; the OS setting is respected as well.')}
+            {@render toggle(s.reduceMotion, checkbox('reduceMotion'), t('settings.general.reduceMotion'), t('settings.general.reduceMotionHint'))}
           </section>
           <section>
-            <h3>Window</h3>
-            {@render toggle(s.alwaysOnTop, checkbox('alwaysOnTop'), 'Always on top')}
-            {@render toggle(s.autostart, checkbox('autostart'), 'Start with system login')}
+            <h3>{t('settings.general.window')}</h3>
+            {@render toggle(s.alwaysOnTop, checkbox('alwaysOnTop'), t('settings.general.alwaysOnTop'))}
+            {@render toggle(s.autostart, checkbox('autostart'), t('settings.general.autostart'))}
           </section>
         {:else if page === 'notifications'}
           <section>
-            <h3>Toasts</h3>
-            {@render toggle(s.toasts, checkbox('toasts'), 'Show a toast', 'When a session needs you, finishes or fails.')}
+            <h3>{t('settings.notifications.toasts')}</h3>
+            {@render toggle(s.toasts, checkbox('toasts'), t('settings.notifications.showToast'), t('settings.notifications.showToastHint'))}
           </section>
           <section>
-            <h3>Sounds</h3>
-            <p class="hint">Played by AgentTiles, also while its window is focused.</p>
+            <h3>{t('settings.notifications.sounds')}</h3>
+            <p class="hint">{t('settings.notifications.soundsHint')}</p>
             <label class="field">
-              <span class="text">Volume</span>
+              <span class="text">{t('settings.notifications.volume')}</span>
               <span class="volume">
                 <input
                   type="range"
@@ -225,7 +210,7 @@
                     playCue('needsApproval', volume);
                   }}
                 />
-                <span class="volume-value">{s.soundVolume}%</span>
+                <span class="volume-value">{t('settings.notifications.volumeValue', { volume: s.soundVolume })}</span>
               </span>
             </label>
             <div class="sounds">
@@ -237,34 +222,39 @@
                       checked={s.sounds[state]}
                       onchange={(e) => toggleSound(state, (e.currentTarget as HTMLInputElement).checked)}
                     />
-                    {SOUND_LABELS[state]}
+                    {t(`settings.notifications.sound.${state}`)}
                   </label>
-                  <button class="play" onclick={() => playCue(state, s.soundVolume)} title="Play" aria-label="Play {SOUND_LABELS[state]}">▶</button>
+                  <button
+                    class="play"
+                    onclick={() => playCue(state, s.soundVolume)}
+                    title={t('settings.notifications.play')}
+                    aria-label={t('settings.notifications.playSound', { sound: t(`settings.notifications.sound.${state}`) })}
+                  >▶</button>
                 </div>
               {/each}
             </div>
           </section>
           <section>
-            <h3>Reminders</h3>
+            <h3>{t('settings.notifications.reminders')}</h3>
             <label class="field">
-              <span class="text">Remind every … minutes while a session waits<small>0 = off</small></span>
+              <span class="text">{t('settings.notifications.remindEvery')}<small>{t('settings.notifications.zeroIsOff')}</small></span>
               <input class="num" type="number" min="0" max="120" value={s.reminderMin} onchange={(e) => numberSetting(e, 'reminderMin', 0, 120)} />
             </label>
             <label class="field">
-              <span class="text">Warn when the context window is … % full<small>0 = off</small></span>
+              <span class="text">{t('settings.notifications.contextWarn')}<small>{t('settings.notifications.zeroIsOff')}</small></span>
               <input class="num" type="number" min="0" max="99" value={s.contextWarnPct} onchange={(e) => numberSetting(e, 'contextWarnPct', 0, 99)} />
             </label>
           </section>
         {:else if page === 'keyboard'}
           <section>
-            <h3>Global</h3>
+            <h3>{t('settings.keyboard.global')}</h3>
             <div class="key-row">
-              {@render toggle(s.hotkeyEnabled, checkbox('hotkeyEnabled'), 'Show / hide AgentTiles', 'Works in every app.')}
+              {@render toggle(s.hotkeyEnabled, checkbox('hotkeyEnabled'), t('settings.keyboard.toggleWindow'), t('settings.keyboard.toggleWindowHint'))}
               <input
                 class="recorder"
                 class:recording={recording === 'global'}
                 readonly
-                value={recording === 'global' ? 'Press keys…' : displayCombo(s.hotkey)}
+                value={recording === 'global' ? t('settings.keyboard.pressKeys') : displayCombo(s.hotkey)}
                 onfocus={() => (recording = 'global')}
                 onblur={() => {
                   recording = null;
@@ -273,18 +263,18 @@
                 onkeydown={(e) => record(e, 'global')}
               />
             </div>
-            {#if globalHint}<p class="hint conflict-note">The global hotkey needs Ctrl, Alt, Shift or Meta.</p>{/if}
+            {#if globalHint}<p class="hint conflict-note">{t('settings.keyboard.globalNeedsModifier')}</p>{/if}
           </section>
           <section>
-            <h3>In the window</h3>
-            <p class="hint">Click a field and press the new key.</p>
-            {#each KEY_LABELS as { action, label } (action)}
+            <h3>{t('settings.keyboard.inWindow')}</h3>
+            <p class="hint">{t('settings.keyboard.inWindowHint')}</p>
+            {#each KEY_ACTIONS as action (action)}
               <div class="key-row" class:conflict={conflicts.has(action)}>
                 {@render toggle(
                   s.keys[action].enabled,
                   (e) => toggleKey(action, (e.currentTarget as HTMLInputElement).checked),
-                  label,
-                  conflicts.has(action) ? 'Used twice' : '',
+                  t(`settings.keyboard.actions.${action}`),
+                  conflicts.has(action) ? t('settings.keyboard.usedTwice') : '',
                 )}
                 {#if action === 'selectTile'}
                   <input class="recorder" readonly value="1 – 9" disabled />
@@ -294,7 +284,7 @@
                     class:recording={recording === action}
                     readonly
                     disabled={!s.keys[action].enabled}
-                    value={recording === action ? 'Press keys…' : displayCombo(s.keys[action].key)}
+                    value={recording === action ? t('settings.keyboard.pressKeys') : displayCombo(s.keys[action].key)}
                     onfocus={() => (recording = action)}
                     onblur={() => (recording = null)}
                     onkeydown={(e) => record(e, action)}
@@ -302,60 +292,60 @@
                 {/if}
               </div>
             {/each}
-            <p class="hint">Fixed: Esc closes dialogs; the question dialog uses ↑ ↓ 1–9 Space Enter like the terminal.</p>
+            <p class="hint">{t('settings.keyboard.fixed')}</p>
           </section>
         {:else if page === 'claude'}
           <section>
-            <h3>Integration</h3>
-            <p class="hint">Entries in <code>~/.claude/settings.json</code>. Your own hooks and statusline keep working.</p>
+            <h3>{t('settings.claude.integration')}</h3>
+            <p class="hint"><WithCode text={t('settings.claude.integrationHint')} codes={{ file: '~/.claude/settings.json' }} /></p>
             {@render toggle(
               i.hooksInstalled,
               (e) => void run(() => window.agenttiles.setHooks((e.currentTarget as HTMLInputElement).checked)),
-              'Hooks',
-              'Live tool activity, Allow / Deny from tiles. Running sessions pick them up when Claude Code reloads its settings.',
+              t('settings.claude.hooks'),
+              t('settings.claude.hooksHint'),
               busy,
             )}
             {@render toggle(
               i.statuslineInstalled,
               (e) => void run(() => window.agenttiles.setStatusline((e.currentTarget as HTMLInputElement).checked)),
-              'Statusline wrapper',
-              'Cost, context and rate limits. An existing statusline keeps working.',
+              t('settings.claude.statusline'),
+              t('settings.claude.statuslineHint'),
               busy,
             )}
-            {#if i.nodePath}<p class="hint">Node.js: {i.nodePath}</p>{/if}
+            {#if i.nodePath}<p class="hint">{t('settings.claude.nodePath', { path: i.nodePath })}</p>{/if}
             {#if i.error}<p class="error">{i.error}</p>{/if}
           </section>
         {:else if page === 'hidden'}
           <section>
-            <h3>Hidden sessions and projects</h3>
+            <h3>{t('settings.hidden.title')}</h3>
             {#if hiddenCount === 0}
-              <p class="hint">Nothing hidden. Right-click a tile to hide a session or a project.</p>
+              <p class="hint">{t('settings.hidden.nothing')}</p>
             {/if}
             {#each view.hiddenSessions as hidden (hidden.sessionId)}
               <div class="hidden-row">
-                <span>Session: {hidden.name}</span>
-                <button class="secondary" onclick={() => run(() => window.agenttiles.unhideSession(hidden.sessionId))}>Show</button>
+                <span>{t('settings.hidden.session', { name: hidden.name })}</span>
+                <button class="secondary" onclick={() => run(() => window.agenttiles.unhideSession(hidden.sessionId))}>{t('settings.hidden.show')}</button>
               </div>
             {/each}
             {#each view.hiddenProjects as path (path)}
               <div class="hidden-row">
-                <span title={path}>Project: {path}</span>
-                <button class="secondary" onclick={() => run(() => window.agenttiles.unhideProject(path))}>Show</button>
+                <span title={path}>{t('settings.hidden.project', { path })}</span>
+                <button class="secondary" onclick={() => run(() => window.agenttiles.unhideProject(path))}>{t('settings.hidden.show')}</button>
               </div>
             {/each}
           </section>
         {:else}
           <section>
-            <h3>Permissions</h3>
+            <h3>{t('settings.advanced.permissions')}</h3>
             <label class="field">
-              <span class="text">Hold Allow / Deny on the tile for … seconds<small>Then the terminal decides alone.</small></span>
+              <span class="text">{t('settings.advanced.holdDecision')}<small>{t('settings.advanced.holdDecisionHint')}</small></span>
               <input class="num" type="number" min="10" max="3600" value={s.permissionTimeoutSec} onchange={onTimeout} />
             </label>
           </section>
           <section>
-            <h3>Logging</h3>
+            <h3>{t('settings.advanced.logging')}</h3>
             <div class="field">
-              <span class="text">Level</span>
+              <span class="text">{t('settings.advanced.logLevel')}</span>
               {@render segment(
                 [['error', 'error'], ['warn', 'warn'], ['info', 'info'], ['debug', 'debug']],
                 s.logLevel,
@@ -364,9 +354,9 @@
             </div>
           </section>
           <section>
-            <h3>Diagnostics</h3>
-            <p class="hint">Compares the session registry, <code>claude agents</code> and what AgentTiles shows.</p>
-            <button class="secondary" onclick={onDoctor}>Open diagnostics</button>
+            <h3>{t('settings.advanced.diagnostics')}</h3>
+            <p class="hint"><WithCode text={t('settings.advanced.diagnosticsHint')} codes={{ agents: 'claude agents' }} /></p>
+            <button class="secondary" onclick={onDoctor}>{t('settings.advanced.openDiagnostics')}</button>
           </section>
         {/if}
       </div>

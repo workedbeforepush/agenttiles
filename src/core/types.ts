@@ -1,4 +1,5 @@
 // Types shared by main process, hook script and renderer. Type-only module: no runtime code.
+import type { LanguageSetting, Locale } from './i18n';
 
 export type SessionState =
   | 'working'
@@ -83,6 +84,19 @@ export interface GitView {
   linesRemoved: number | null;
 }
 
+/** The word shown for a state; questions and plans have a more specific one. Translated by the UI. */
+export type StateLabel = SessionState | 'question' | 'planReady';
+
+/**
+ * The activity line: text from the session (tool call, question) shown as it is, or a fixed phrase the UI translates.
+ * `failed` wraps the tool call that failed.
+ */
+export type Activity =
+  | { kind: 'text'; text: string }
+  | { kind: 'failed'; text: string }
+  | { kind: 'thinking' }
+  | { kind: 'planReady' };
+
 export interface TileView {
   sessionId: string;
   pid: number;
@@ -90,9 +104,9 @@ export interface TileView {
   project: string;
   name: string;
   state: SessionState;
-  stateLabel: string;
+  label: StateLabel;
   stateSince: number;
-  activity: string | null;
+  activity: Activity | null;
   model: string | null;
   subagents: number;
   tasksDone: number;
@@ -243,6 +257,8 @@ export interface Settings {
   tileSize: TileSize;
   /** Tiles in one block per project folder, each with a heading. */
   groupByProject: boolean;
+  /** UI language: the system's (when AgentTiles ships it) or a fixed one. */
+  language: LanguageSetting;
 }
 
 /** A settings change; nested keys and sounds are merged per entry, so two quick edits cannot undo each other. */
@@ -294,6 +310,8 @@ export interface SettingsView {
   askHooks: boolean;
   /** First start: the welcome tour has not run yet. */
   showTour: boolean;
+  /** The language the UI uses, resolved from the setting. */
+  locale: Locale;
   platform: string;
 }
 

@@ -11,6 +11,8 @@
   import ReviewDialog from './components/ReviewDialog.svelte';
   import NewSession from './components/NewSession.svelte';
   import Tour from './components/Tour.svelte';
+  import WithCode from './components/WithCode.svelte';
+  import { setLocale, t } from './i18n.svelte';
   import { snapshot as demoSnapshot } from '../../core/demo';
   import { filterTiles, groupTiles, paginate, type StatusFilter } from './layout';
   import { NEEDS_YOU, paintTaskbarBadge, paintTrayIcon } from './format';
@@ -325,6 +327,10 @@
   });
 
   $effect(() => {
+    if (settingsView) setLocale(settingsView.locale);
+  });
+
+  $effect(() => {
     document.documentElement.classList.toggle('reduce-motion', settings?.reduceMotion ?? false);
   });
 
@@ -339,7 +345,7 @@
   $effect(() => {
     // The tray and taskbar always count the real sessions, also during the tour.
     const count = live.header.waiting;
-    const tooltip = `AgentTiles · ${live.header.working} working · ${count} waiting · ${live.header.done} done`;
+    const tooltip = t('app.trayTooltip', { working: live.header.working, waiting: count, done: live.header.done });
     if (tooltip === lastTray) return;
     lastTray = tooltip;
     void window.agenttiles.iconPixelSize().then(async (size) => {
@@ -351,6 +357,7 @@
 
 <svelte:window onkeydown={onKey} />
 
+<!-- A message with a {code} placeholder, rendered with the code part as <code>. -->
 <div class="app">
   <Header
     header={snapshot.header}
@@ -385,13 +392,13 @@
   <main bind:clientWidth={mainWidth} bind:clientHeight={mainHeight}>
     {#if snapshot.tiles.length === 0}
       <div class="empty">
-        <p>No Claude Code sessions running.</p>
-        <p class="hint">Sessions appear here as soon as you start <code>claude</code> in a terminal.</p>
+        <p>{t('app.empty.noSessions')}</p>
+        <p class="hint"><WithCode text={t('app.empty.noSessionsHint')} codes={{ code: 'claude' }} /></p>
       </div>
     {:else if shownTiles.length === 0}
       <div class="empty">
-        <p>No sessions match the filter.</p>
-        <p class="hint"><button class="link" onclick={() => (filters = [])}>Show all</button></p>
+        <p>{t('app.empty.noMatch')}</p>
+        <p class="hint"><button class="link" onclick={() => (filters = [])}>{t('app.empty.showAll')}</button></p>
       </div>
     {:else}
       <div class="blocks" style:gap="{viewMode === 'list' ? ROW_GAP : GAP}px">
@@ -422,8 +429,8 @@
         {/each}
       </div>
       {#if pages > 1}
-        <nav class="pager" aria-label="Pages">
-          <button disabled={page === 0} onclick={() => (page = page - 1)} aria-label="Previous page">‹</button>
+        <nav class="pager" aria-label={t('app.pager.label')}>
+          <button disabled={page === 0} onclick={() => (page = page - 1)} aria-label={t('app.pager.previous')}>‹</button>
           {#each Array.from({ length: pages }, (_, i) => i) as i (i)}
             <button
               class="dot"
@@ -432,11 +439,11 @@
                 block.items.some(({ tile }) => NEEDS_YOU.includes(tile.state)),
               )}
               onclick={() => (page = i)}
-              aria-label="Page {i + 1}"
+              aria-label={t('app.pager.page', { page: i + 1 })}
             ></button>
           {/each}
-          <button disabled={page === pages - 1} onclick={() => (page = page + 1)} aria-label="Next page">›</button>
-          <span class="count">Page {page + 1} / {pages}</span>
+          <button disabled={page === pages - 1} onclick={() => (page = page + 1)} aria-label={t('app.pager.next')}>›</button>
+          <span class="count">{t('app.pager.count', { page: page + 1, pages })}</span>
         </nav>
       {/if}
     {/if}
@@ -498,21 +505,14 @@
 {#if settingsView?.askHooks && !touring}
   <div class="modal-backdrop">
     <div class="modal">
-      <h2>Connect AgentTiles to Claude Code</h2>
-      <p>
-        AgentTiles already shows every running session. Installing its hooks and statusline wrapper in
-        <code>~/.claude/settings.json</code> adds live tool activity, Allow / Deny on tiles, cost, context and rate
-        limits.
-      </p>
-      <p class="hint">
-        Existing hooks and statuslines are kept. Running sessions pick up the hooks when Claude Code reloads its
-        settings. You can install or remove them any time in Settings.
-      </p>
+      <h2>{t('app.hookPrompt.title')}</h2>
+      <p><WithCode text={t('app.hookPrompt.body')} codes={{ code: '~/.claude/settings.json' }} /></p>
+      <p class="hint">{t('app.hookPrompt.hint')}</p>
       <div class="modal-buttons">
-        <button class="secondary" disabled={installing} onclick={() => closeHookPrompt(true)}>Don't ask again</button>
-        <button class="secondary" disabled={installing} onclick={() => closeHookPrompt(false)}>Not now</button>
+        <button class="secondary" disabled={installing} onclick={() => closeHookPrompt(true)}>{t('app.hookPrompt.never')}</button>
+        <button class="secondary" disabled={installing} onclick={() => closeHookPrompt(false)}>{t('app.hookPrompt.notNow')}</button>
         <button class="primary" disabled={installing} onclick={installFromPrompt}>
-          {installing ? 'Installing…' : 'Install hooks and statusline'}
+          {installing ? t('app.hookPrompt.installing') : t('app.hookPrompt.install')}
         </button>
       </div>
     </div>
@@ -634,11 +634,6 @@
   .hint {
     font-size: 12px;
     color: var(--muted);
-  }
-
-  code {
-    font-family: var(--mono);
-    font-size: 12px;
   }
 
   .modal-backdrop {

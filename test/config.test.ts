@@ -11,6 +11,6 @@ describe('settings normalisation', () => {
   });
 
   it('falls back to defaults for unknown or broken values', () => {
-    expect(normaliseSettings({ sounds: 'loud', tileSize: 'XL', theme: 'neon' })).toEqual(DEFAULT_SETTINGS);
+    expect(normaliseSettings({ sounds: 'loud', tileSize: 'XL', theme: 'neon', language: 'xx' })).toEqual(DEFAULT_SETTINGS);
   });
 });

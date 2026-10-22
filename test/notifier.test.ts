@@ -12,7 +12,7 @@ function tile(extra: Partial<TileView>): TileView {
     project: 'x',
     name: 'Demo',
     state: 'done',
-    stateLabel: 'ready',
+    label: 'done',
     stateSince: 0,
     activity: null,
     model: null,
@@ -58,7 +58,7 @@ describe('toast text', () => {
       toastText(
         tile({
           state: 'needsInput',
-          stateLabel: 'question',
+          label: 'question',
           pending: {
             id: 'q',
             toolName: 'AskUserQuestion',
@@ -75,6 +75,6 @@ describe('toast text', () => {
         }),
       ),
     ).toEqual({ title: 'Demo · question', body: 'Which color? (+1 more)' });
-    expect(toastText(tile({ state: 'error', activity: 'overloaded' }))).toEqual({ title: 'Demo · error', body: 'overloaded' });
+    expect(toastText(tile({ state: 'error', activity: { kind: 'text', text: 'overloaded' } }))).toEqual({ title: 'Demo · error', body: 'overloaded' });
   });
 });

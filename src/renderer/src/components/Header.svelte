@@ -1,7 +1,8 @@
 <script lang="ts">
   import type { HeaderView, RateLimit, UpdateView, ViewMode } from '../../../core/types';
   import type { StatusFilter } from '../layout';
-  import { USAGE_COST_HINT, clock, since, usd } from '../format';
+  import { clock, since, usd } from '../format';
+  import { locale, t } from '../i18n.svelte';
 
   interface Props {
     header: HeaderView;
@@ -65,31 +66,35 @@
     class:empty={!limit}
     class:stale={stale(limit)}
     title={limit
-      ? `${label} limit: ${limit.usedPct.toFixed(1)} % used, one box = 10 %. As of ${new Date(limit.observedAt).toLocaleString()} (last statusline update).`
-      : 'No statusline data yet'}
+      ? t('header.limits.tooltip', {
+          label,
+          pct: limit.usedPct.toLocaleString(locale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
+          time: new Date(limit.observedAt).toLocaleString(locale()),
+        })
+      : t('header.limits.noData')}
   >
     <span class="label">{label}</span>
-    <div class="boxes" aria-label="{label} usage {limit ? Math.round(limit.usedPct) : 0} percent">
+    <div class="boxes" aria-label={t('header.limits.usage', { label, pct: limit ? Math.round(limit.usedPct) : 0 })}>
       {#each boxes(limit) as fill, i (i)}
         <span class="box"><span class="box-fill" style:width="{fill * 100}%"></span></span>
       {/each}
     </div>
     <b>{limit ? `${Math.round(limit.usedPct)}%` : '–'}</b>
     {#if limit && stale(limit)}
-      <span class="label">as of {since(limit.observedAt, now)} ago</span>
+      <span class="label">{t('header.limits.asOf', { time: since(limit.observedAt, now) })}</span>
     {:else if limit?.resetsAt}
-      <span class="label">resets {since(now, limit.resetsAt * 1000)}</span>
+      <span class="label">{t('header.limits.resets', { time: since(now, limit.resetsAt * 1000) })}</span>
     {/if}
     {#if eta !== null}
-      <span class="eta" title="At the pace of the last 30 minutes the limit is reached before the reset">
-        limit ~{clock(eta)}
+      <span class="eta" title={t('header.limits.etaHint')}>
+        {t('header.limits.eta', { time: clock(eta) })}
       </span>
     {/if}
   </div>
 {/snippet}
 
 <header>
-  <div class="group" role="group" aria-label="Filter by state">
+  <div class="group" role="group" aria-label={t('header.filter.group')} data-tour="counters">
     {#each [['working', header.working, 'var(--st-working)'], ['waiting', header.waiting, 'var(--st-needsApproval)'], ['done', header.done, 'var(--st-done)']] as const as [filter, count, color] (filter)}
       <button
         class="item filter"
@@ -97,9 +102,11 @@
         style:--c={color}
         aria-pressed={filters.includes(filter)}
         onclick={() => onFilter(filter)}
-        title={filters.includes(filter) ? `Stop filtering by ${filter}` : `Show only ${filter} sessions (click more to combine)`}
+        title={filters.includes(filter)
+          ? t('header.filter.stop', { filter: t(`header.filter.${filter}`) })
+          : t('header.filter.showOnly', { filter: t(`header.filter.${filter}`) })}
       >
-        <b>{count}</b><span class="label">{filter}</span>
+        <b>{count}</b><span class="label">{t(`header.filter.${filter}`)}</span>
       </button>
     {/each}
   </div>
@@ -109,22 +116,28 @@
     class:refreshing={refreshingLimits}
     onclick={onRefreshLimits}
     disabled={refreshingLimits}
-    title="Click to query the plan limits now"
+    title={t('header.limits.refresh')}
   >
-    {@render bar('5h', header.fiveHour, header.fiveHourEta)}
-    {@render bar('7d', header.sevenDay, null)}
+    {@render bar(t('header.limits.fiveHour'), header.fiveHour, header.fiveHourEta)}
+    {@render bar(t('header.limits.sevenDay'), header.sevenDay, null)}
   </button>
   <span class="sep"></span>
-  <button class="item today" onclick={onToday} title={USAGE_COST_HINT}>
-    <b>{usd(header.today.costUsd)}</b><span class="label">API-equiv. today</span>
+  <button class="item today" onclick={onToday} title={t('format.usageCostHint')}>
+    <b>{usd(header.today.costUsd)}</b><span class="label">{t('header.today')}</span>
   </button>
   <div class="buttons">
     {#if update?.failed}
-      <button class="update failed" onclick={onUpdate} title="The last update did not work: click for details">Update failed</button>
+      <button class="update failed" onclick={onUpdate} title={t('header.update.failedHint')}>{t('header.update.failed')}</button>
     {:else if update?.available}
-      <button class="update" onclick={onUpdate} title="AgentTiles {update.current} → {update.available}">Update {update.available}</button>
+      <button
+        class="update"
+        onclick={onUpdate}
+        title={t('header.update.availableHint', { current: update.current, available: update.available })}
+      >
+        {t('header.update.available', { version: update.available })}
+      </button>
     {/if}
-    <button onclick={onNewSession} title="New session or resume" aria-label="New session">
+    <button onclick={onNewSession} title={t('header.newSessionHint')} aria-label={t('header.newSession')} data-tour="newSession">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M12 5v14M5 12h14" />
       </svg>
@@ -132,8 +145,8 @@
     <button
       class:on={grouped}
       onclick={onGroup}
-      title={grouped ? 'Stop grouping by project' : 'Group by project'}
-      aria-label="Group by project"
+      title={grouped ? t('header.ungroup') : t('header.group')}
+      aria-label={t('header.group')}
       aria-pressed={grouped}
     >
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
@@ -142,8 +155,8 @@
     </button>
     <button
       onclick={() => onViewMode(viewMode === 'tiles' ? 'list' : 'tiles')}
-      title={viewMode === 'tiles' ? 'Show as list' : 'Show as tiles'}
-      aria-label="Toggle view"
+      title={viewMode === 'tiles' ? t('header.showList') : t('header.showTiles')}
+      aria-label={t('header.toggleView')}
     >
       {#if viewMode === 'tiles'}
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
@@ -158,8 +171,8 @@
     </button>
     <button
       onclick={onFullscreen}
-      title={fullscreen ? 'Exit full screen (F11 / Esc)' : 'Full screen (F11)'}
-      aria-label={fullscreen ? 'Exit full screen' : 'Full screen'}
+      title={fullscreen ? t('header.exitFullscreenHint') : t('header.fullscreenHint')}
+      aria-label={fullscreen ? t('header.exitFullscreen') : t('header.fullscreen')}
     >
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
         {#if fullscreen}
@@ -169,12 +182,12 @@
         {/if}
       </svg>
     </button>
-    <button onclick={onDoctor} title="Diagnostics" aria-label="Diagnostics">
+    <button onclick={onDoctor} title={t('header.diagnostics')} aria-label={t('header.diagnostics')}>
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
       </svg>
     </button>
-    <button onclick={onSettings} title="Settings" aria-label="Settings">
+    <button onclick={onSettings} title={t('header.settings')} aria-label={t('header.settings')} data-tour="settings">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="3" />
         <path

@@ -1,5 +1,15 @@
 // Per-session record and the pure state logic that merges registry, transcript and hook events.
-import type { DiffView, GitView, HistoryPoint, PendingPermission, QuestionView, SessionState, TileView } from './types';
+import type {
+  Activity,
+  DiffView,
+  GitView,
+  HistoryPoint,
+  PendingPermission,
+  QuestionView,
+  SessionState,
+  StateLabel,
+  TileView,
+} from './types';
 import { suggestionLabel, suggestionsOf, type PermissionUpdate } from './permissions';
 import type { RegistryEntry } from './registry';
 import { emptyTranscriptInfo, pushRecent, type TranscriptInfo } from './transcript';
@@ -11,8 +21,8 @@ export const HISTORY_WINDOW_MS = 30 * 60 * 1000;
 export interface HookState {
   state: SessionState;
   at: number;
-  activity: string | null;
-  label: string | null;
+  activity: Activity | null;
+  label: StateLabel | null;
   /** Survives the registry's later "idle" (turn failures). */
   sticky: boolean;
 }
@@ -114,12 +124,16 @@ const RELEASE_MATCHING = new Set(['PostToolUse', 'PostToolUseFailure', 'Permissi
  * Sets the hook state unless a newer event already did. Hook events arrive from separate processes, so they can be
  * delivered out of order; `at` is the time the hook process started, not the receive time.
  */
+function textActivity(text: string | null): Activity | null {
+  return text === null ? null : { kind: 'text', text };
+}
+
 function setHook(
   rec: SessionRecord,
   at: number,
   state: SessionState,
-  activity: string | null,
-  label: string | null,
+  activity: Activity | null,
+  label: StateLabel | null,
   sticky = false,
 ): void {
   if (rec.hookState && at < rec.hookState.at) return;
@@ -186,12 +200,12 @@ export function applyHookEvent(rec: SessionRecord, input: HookInput, now: number
         break;
       }
       if (toolName === 'ExitPlanMode') {
-        setHook(rec, now, 'needsInput', null, 'plan ready');
+        setHook(rec, now, 'needsInput', null, 'planReady');
         break;
       }
       const summary = toolSummary(toolName, input['tool_input']);
       rec.recentTools = pushRecent(rec.recentTools, summary);
-      setHook(rec, now, 'working', summary, null);
+      setHook(rec, now, 'working', { kind: 'text', text: summary }, null);
       break;
     }
     case 'PostToolUse':
@@ -206,7 +220,7 @@ export function applyHookEvent(rec: SessionRecord, input: HookInput, now: number
       }
       const error = s(input, 'error');
       const detail = error ? `: ${clipText(error, 120)}` : '';
-      setHook(rec, now, 'working', `${toolSummary(toolName, input['tool_input'])} failed${detail}`, null);
+      setHook(rec, now, 'working', { kind: 'failed', text: `${toolSummary(toolName, input['tool_input'])}${detail}` }, null);
       break;
     }
     case 'Notification': {
@@ -216,7 +230,7 @@ export function applyHookEvent(rec: SessionRecord, input: HookInput, now: number
       } else if (type === 'idle_prompt') {
         setHook(rec, now, 'done', null, null);
       } else if (type === 'elicitation_dialog') {
-        setHook(rec, now, 'needsInput', s(input, 'message'), 'question');
+        setHook(rec, now, 'needsInput', textActivity(s(input, 'message')), 'question');
       }
       break;
     }
@@ -232,8 +246,8 @@ export function applyHookEvent(rec: SessionRecord, input: HookInput, now: number
       const error = s(input, 'error') ?? 'unknown';
       const detail = s(input, 'last_assistant_message');
       endTurn(rec, now);
-      if (error === 'rate_limit') setHook(rec, now, 'limitHit', detail ? clipText(detail, 120) : null, null, true);
-      else setHook(rec, now, 'error', detail ? clipText(detail, 120) : error, null, true);
+      if (error === 'rate_limit') setHook(rec, now, 'limitHit', textActivity(detail ? clipText(detail, 120) : null), null, true);
+      else setHook(rec, now, 'error', textActivity(detail ? clipText(detail, 120) : error), null, true);
       break;
     }
     case 'SubagentStart': {
@@ -392,8 +406,8 @@ export function applyStatusline(rec: SessionRecord, payload: HookInput): void {
 export interface Derived {
   state: SessionState;
   at: number;
-  activity: string | null;
-  label: string | null;
+  activity: Activity | null;
+  label: StateLabel | null;
 }
 
 function fromRegistry(rec: SessionRecord, reg: RegistryEntry): Derived {
@@ -421,7 +435,7 @@ function fromRegistry(rec: SessionRecord, reg: RegistryEntry): Derived {
     case 'shell':
       return { state: 'shell', at, activity: null, label: null };
     default:
-      return { state: 'unknown', at, activity: null, label: reg.status };
+      return { state: 'unknown', at, activity: null, label: null };
   }
 }
 
@@ -430,12 +444,12 @@ export function deriveState(rec: SessionRecord): Derived {
   const first = rec.pending[0];
   if (first?.toolName === 'AskUserQuestion') {
     const question = questionsOf(first.toolInput)[0]?.question ?? null;
-    return { state: 'needsInput', at: first.at, activity: question, label: 'question' };
+    return { state: 'needsInput', at: first.at, activity: textActivity(question), label: 'question' };
   }
   if (first?.plan !== null && first?.plan !== undefined) {
-    return { state: 'needsInput', at: first.at, activity: 'Plan ready for review', label: 'plan ready' };
+    return { state: 'needsInput', at: first.at, activity: { kind: 'planReady' }, label: 'planReady' };
   }
-  if (first) return { state: 'needsApproval', at: first.at, activity: first.summary, label: null };
+  if (first) return { state: 'needsApproval', at: first.at, activity: textActivity(first.summary), label: null };
   const hook = rec.hookState;
   const reg = rec.registry ? fromRegistry(rec, rec.registry) : null;
   if (hook && (!reg || hook.at >= reg.at)) {
@@ -444,19 +458,6 @@ export function deriveState(rec: SessionRecord): Derived {
   if (reg) return reg;
   return { state: 'idle', at: rec.firstSeen, activity: null, label: null };
 }
-
-const LABELS: Record<SessionState, string> = {
-  working: 'working',
-  needsApproval: 'approve?',
-  needsInput: 'question',
-  done: 'ready',
-  idle: 'idle',
-  error: 'error',
-  limitHit: 'limit hit',
-  compacting: 'compacting',
-  shell: 'shell',
-  unknown: 'unknown',
-};
 
 /**
  * Recomputes the derived view state and records it in the 30 minute history. Keeps `since` while the state is
@@ -507,7 +508,8 @@ export function toTile(rec: SessionRecord, overrides: TileOverrides): TileView {
   const t = rec.transcript;
   let activity = derived.activity;
   if (activity === null && derived.state === 'working') {
-    activity = (rec.hooks ? null : t.activeTool) ?? 'thinking';
+    const tool = rec.hooks ? null : t.activeTool;
+    activity = tool ? { kind: 'text', text: tool } : { kind: 'thinking' };
   }
   const tasks = [...rec.tasks.values()];
   const first = rec.pending[0];
@@ -521,7 +523,7 @@ export function toTile(rec: SessionRecord, overrides: TileOverrides): TileView {
     project: projectName(rec.cwd),
     name: tileName(rec, overrides.rename),
     state: derived.state,
-    stateLabel: derived.label ?? LABELS[derived.state],
+    label: derived.label ?? derived.state,
     stateSince: rec.view.since,
     activity,
     model: rec.statusline?.model ?? t.model,

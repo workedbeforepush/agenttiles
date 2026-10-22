@@ -12,6 +12,7 @@ import { clipText } from '../core/tools';
 import { cleanEnv } from './env';
 import { openTerminal } from './platform';
 import { log } from './log';
+import { t } from './i18n';
 
 const HEAD_BYTES = 64 * 1024;
 const TAIL_BYTES = 256 * 1024;
@@ -84,7 +85,7 @@ export async function recentSessions(running: Set<string>): Promise<LaunchView> 
         sessionId: file.sessionId,
         cwd: info.cwd,
         project: projectName(info.cwd),
-        title: end.title ?? (prompt ? clipText(prompt.replace(/\s+/g, ' '), 80) : 'Untitled session'),
+        title: end.title ?? (prompt ? clipText(prompt.replace(/\s+/g, ' '), 80) : t('main.launch.untitled')),
         lastAt: file.mtime,
       });
     } catch (error) {
@@ -96,12 +97,12 @@ export async function recentSessions(running: Set<string>): Promise<LaunchView> 
 
 /** Starts `claude` in a new terminal tab, resuming `sessionId` when given. Throws with a message for the user. */
 export async function launchSession(cwd: string, sessionId: string | null): Promise<void> {
-  if (!isDirectory(cwd)) throw new Error(`Folder not found: ${cwd}`);
-  if (sessionId !== null && !SESSION_ID.test(sessionId)) throw new Error('Invalid session id.');
+  if (!isDirectory(cwd)) throw new Error(t('main.launch.folderNotFound', { path: cwd }));
+  if (sessionId !== null && !SESSION_ID.test(sessionId)) throw new Error(t('main.launch.invalidSessionId'));
   const command = sessionId ? ['claude', '--resume', sessionId] : ['claude'];
   const result = await openTerminal(cwd, command, cleanEnv());
-  if (result === 'unsupported') throw new Error('Starting sessions is not supported on this OS.');
-  if (result === 'failed') throw new Error('No terminal could be started (Windows Terminal, iTerm2 / Terminal.app, or a Linux terminal).');
+  if (result === 'unsupported') throw new Error(t('main.launch.startUnsupported'));
+  if (result === 'failed') throw new Error(t('main.launch.noTerminal'));
   log.info(`launched ${command.join(' ')} in ${cwd}`);
 }
 
@@ -117,23 +118,23 @@ export function runClaude(args: string[]): Promise<string> {
 
 /** Command that opens a background session in a terminal; throws on an id that is not a job id. */
 export function attachCommand(jobId: string): string[] {
-  if (!JOB_ID.test(jobId)) throw new Error('Invalid background session id.');
+  if (!JOB_ID.test(jobId)) throw new Error(t('main.launch.invalidJobId'));
   return ['claude', 'attach', jobId];
 }
 
 /** Opens a background session (`claude attach`) in a new terminal tab. Throws with a message for the user. */
 export async function attachSession(cwd: string, jobId: string): Promise<void> {
-  if (!isDirectory(cwd)) throw new Error(`Folder not found: ${cwd}`);
+  if (!isDirectory(cwd)) throw new Error(t('main.launch.folderNotFound', { path: cwd }));
   const command = attachCommand(jobId);
   const result = await openTerminal(cwd, command, cleanEnv());
-  if (result === 'unsupported') throw new Error('Opening background sessions is not supported on this OS.');
-  if (result === 'failed') throw new Error('No terminal could be started (Windows Terminal, iTerm2 / Terminal.app, or a Linux terminal).');
+  if (result === 'unsupported') throw new Error(t('main.launch.attachUnsupported'));
+  if (result === 'failed') throw new Error(t('main.launch.noTerminal'));
   log.info(`launched ${command.join(' ')}`);
 }
 
 /** Stops a background session (`claude stop`). */
 export async function stopSession(jobId: string): Promise<void> {
-  if (!JOB_ID.test(jobId)) throw new Error('Invalid background session id.');
+  if (!JOB_ID.test(jobId)) throw new Error(t('main.launch.invalidJobId'));
   await runClaude(['stop', jobId]);
   log.info(`stopped background session ${jobId}`);
 }
