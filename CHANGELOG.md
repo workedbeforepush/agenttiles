@@ -3,6 +3,23 @@
 All notable changes to AgentTiles. Versions follow [Semantic Versioning](https://semver.org/); entries are written
 by release-please from the pull request titles (conventional commits).
 
+## [0.5.0](https://github.com/workedbeforepush/agenttiles/compare/v0.4.0...v0.5.0) (2026-10-22)
+
+
+### Features
+
+* count every session state in the header counters ([#31](https://github.com/workedbeforepush/agenttiles/issues/31)) ([c00bbf5](https://github.com/workedbeforepush/agenttiles/commit/c00bbf5a408417ad36dbd5ba6b1ed64ca3a146da))
+* option to open new sessions in a new terminal window ([#26](https://github.com/workedbeforepush/agenttiles/issues/26)) ([fa450e9](https://github.com/workedbeforepush/agenttiles/commit/fa450e94deb75e5b298bec35e41ac8e5d7bb9235))
+* show when the status filter hides sessions ([#30](https://github.com/workedbeforepush/agenttiles/issues/30)) ([263efde](https://github.com/workedbeforepush/agenttiles/commit/263efdea8c49e68fe7d96eb90d23eba8b00d1af1))
+* start a new session in its own git worktree ([#24](https://github.com/workedbeforepush/agenttiles/issues/24)) ([0a17fae](https://github.com/workedbeforepush/agenttiles/commit/0a17faed6040244c20f67b07dc73926b58cbbb8f))
+
+
+### Bug Fixes
+
+* harden the hook connection and fix bugs found in a code review ([#32](https://github.com/workedbeforepush/agenttiles/issues/32)) ([bde709e](https://github.com/workedbeforepush/agenttiles/commit/bde709ee60e0cc125c5d87446383beb175e112ee))
+* jump to the right Windows Terminal tab when its title has umlauts or other non-ASCII letters ([#25](https://github.com/workedbeforepush/agenttiles/issues/25)) ([8c7d804](https://github.com/workedbeforepush/agenttiles/commit/8c7d804ff0b390dd88cd24d6a11b97350ce30f18))
+* show an idle session as idle again after Claude Code compacts it while idle ([#29](https://github.com/workedbeforepush/agenttiles/issues/29)) ([487d3cb](https://github.com/workedbeforepush/agenttiles/commit/487d3cbba24e20c6f0134b1b5d431f07e3db2744))
+
 ## [0.4.0](https://github.com/workedbeforepush/agenttiles/compare/v0.3.0...v0.4.0) (2026-10-22)
 
 
