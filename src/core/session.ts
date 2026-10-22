@@ -548,6 +548,7 @@ export function toTile(rec: SessionRecord, overrides: TileOverrides): TileView {
         }
       : null,
     version: rec.registry?.version ?? null,
+    jobId: rec.registry?.jobId ?? null,
     recentTools: rec.hooks ? rec.recentTools : t.recentTools,
     turnStartedAt: rec.hooks ? rec.turnStartedAt : hooklessTurnStart,
     lastTurnMs: rec.hooks ? rec.lastTurnMs : hooklessLastTurn,

@@ -89,6 +89,7 @@ function tile(now: number, s: TileSpec): TileView {
     lastAssistant: s.lastAssistant ?? null,
     pending: s.pending ?? null,
     version: '2.1.306',
+    jobId: null,
     recentTools: s.recentTools ?? [],
     turnStartedAt: s.turnMin != null ? now - s.turnMin * MIN : null,
     lastTurnMs: s.lastTurnMin != null ? s.lastTurnMin * MIN : null,

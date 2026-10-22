@@ -28,6 +28,7 @@ function tile(extra: Partial<TileView>): TileView {
     lastAssistant: null,
     pending: null,
     version: null,
+    jobId: null,
     recentTools: [],
     turnStartedAt: null,
     lastTurnMs: null,

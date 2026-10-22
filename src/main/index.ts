@@ -34,7 +34,7 @@ import { IpcServer } from './ipcServer';
 import { initLog, log, setLogLevel } from './log';
 import { Notifier } from './notifier';
 import { Attention } from './attention';
-import { launchSession, recentSessions } from './launcher';
+import { attachSession, launchSession, recentSessions, stopSession } from './launcher';
 import { focusSession, initPlatform, registerAppIdentity, setLinuxAutostart } from './platform';
 import { APP_ID, APP_NAME, persistentIcons } from './appId';
 import { SessionStore } from './store';
@@ -142,6 +142,16 @@ async function start(): Promise<void> {
     const rec = store.record(sessionId);
     if (!rec?.registry) return;
     const reg = rec.registry;
+    // A background session has no terminal window: open it in a new tab instead.
+    if (reg.jobId !== null) {
+      try {
+        await attachSession(rec.cwd, reg.jobId);
+      } catch (error) {
+        log.warn(`attach failed: ${(error as Error).message}`);
+        notifier.info('AgentTiles', (error as Error).message);
+      }
+      return;
+    }
     const titles = [
       reg.name && reg.nameSource !== 'derived' ? reg.name : null,
       rec.transcript.aiTitle,
@@ -151,6 +161,28 @@ async function start(): Promise<void> {
     else if (result === 'noX11') notifier.info('AgentTiles', 'Focus jump needs an X11 session; Wayland does not let apps raise windows.');
     else if (result === 'noXdotool') notifier.info('AgentTiles', 'Focus jump needs xdotool. Install it with your package manager.');
     else if (result === 'notFound') notifier.info('AgentTiles', `No terminal window found for ${rec.sessionId}.`);
+  }
+
+  async function stopBackground(sessionId: string): Promise<void> {
+    const jobId = store.record(sessionId)?.registry?.jobId;
+    const name = snapshot.tiles.find((t) => t.sessionId === sessionId)?.name ?? sessionId;
+    if (!jobId) return;
+    const { response } = await dialog.showMessageBox(win, {
+      type: 'question',
+      title: 'Stop background session',
+      message: `Stop "${name}"?`,
+      detail: `Runs "claude stop ${jobId}". The conversation is kept; resume it from New session.`,
+      buttons: ['Stop', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1,
+    });
+    if (response !== 0) return;
+    try {
+      await stopSession(jobId);
+    } catch (error) {
+      log.warn(`stop failed: ${(error as Error).message}`);
+      notifier.info('AgentTiles', `claude stop ${jobId} failed: ${(error as Error).message}`);
+    }
   }
 
   function applyHotkey(): void {
@@ -278,6 +310,9 @@ async function start(): Promise<void> {
         return;
       case 'copySessionId':
         clipboard.writeText(sessionId);
+        return;
+      case 'stop':
+        await stopBackground(sessionId);
         return;
     }
     config.save();

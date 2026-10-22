@@ -53,6 +53,9 @@ Facts learned the hard way; check before building on the opposite.
 - Claude Code runs `PermissionRequest` hooks in parallel with its own dialog; the first answer wins.
   `AskUserQuestion` goes through it too (answer with `allow` + `updatedInput.answers`). `ExitPlanMode` ignores a hook
   `allow`, and Claude treats a deny `message` as untrusted tool output, so plans are decided in the terminal.
+- Background sessions (`claude --bg`) have a normal registry file with `"kind": "bg"` and a `jobId` (the id for
+  `claude attach` / `claude stop`); their process stays alive while idle. More state lives in
+  `~/.claude/jobs/<jobId>/state.json`.
 - The registry `cwd` is the session's project folder; `CwdChanged` only reports `cd` inside the Bash tool.
 - Windows remembers the first icon path per app id: icons Windows keeps (relaunch, toast) come from copies in the
   userData folder. Taskbar overlay icons are rescaled by Windows and stay soft; the crisp native badge needs package

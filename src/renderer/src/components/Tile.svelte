@@ -297,6 +297,7 @@
     {#if tile.costUsd !== null}<span title={COST_HINT}>{usd(tile.costUsd)}</span>{/if}
     {#if tile.subagents > 0}<span>{tile.subagents} agent{tile.subagents === 1 ? '' : 's'}</span>{/if}
     {#if tile.tasksTotal > 0}<span>{tile.tasksDone}/{tile.tasksTotal} tasks</span>{/if}
+    {#if tile.jobId !== null}<span class="bg" title="Background session (claude --bg): click opens it with claude attach">bg</span>{/if}
     {#if !tile.hooks}<span class="nohooks" title="No hook events from this session yet">no hooks</span>{/if}
   </div>
 
@@ -363,6 +364,10 @@
     <hr />
     <button onclick={() => act('openFolder')}>Open folder</button>
     <button onclick={() => act('copySessionId')}>Copy session id</button>
+    {#if tile.jobId !== null}
+      <hr />
+      <button onclick={() => act('stop')}>Stop background session…</button>
+    {/if}
   </div>
 {/if}
 
@@ -761,6 +766,10 @@
 
   .nohooks {
     color: var(--st-needsApproval);
+  }
+
+  .bg {
+    color: var(--accent);
   }
 
   .history {

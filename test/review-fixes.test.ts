@@ -33,6 +33,7 @@ function registry(status: string, at: number): RegistryEntry {
     procStart: '1',
     kind: 'interactive',
     version: null,
+    jobId: null,
   };
 }
 
