@@ -3,6 +3,18 @@
 All notable changes to AgentTiles. Versions follow [Semantic Versioning](https://semver.org/); entries are written
 by release-please from the pull request titles (conventional commits).
 
+## [0.4.0](https://github.com/workedbeforepush/agenttiles/compare/v0.3.0...v0.4.0) (2026-10-22)
+
+
+### Features
+
+* prepare the UI for translations, with a language setting ([#21](https://github.com/workedbeforepush/agenttiles/issues/21)) ([11ea156](https://github.com/workedbeforepush/agenttiles/commit/11ea15690a268493d99064829654a628a1a7cff4))
+
+
+### Bug Fixes
+
+* softer, less robotic sound cues ([#22](https://github.com/workedbeforepush/agenttiles/issues/22)) ([4486a90](https://github.com/workedbeforepush/agenttiles/commit/4486a909a224a891afbb3e5dfd8bce3c6928bf1c))
+
 ## [0.3.0](https://github.com/workedbeforepush/agenttiles/compare/v0.2.0...v0.3.0) (2026-10-22)
 
 
