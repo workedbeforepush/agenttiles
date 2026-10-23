@@ -3,6 +3,13 @@
 All notable changes to AgentTiles. Versions follow [Semantic Versioning](https://semver.org/); entries are written
 by release-please from the pull request titles (conventional commits).
 
+## [0.7.1](https://github.com/workedbeforepush/agenttiles/compare/v0.7.0...v0.7.1) (2026-10-23)
+
+
+### Bug Fixes
+
+* jump to the IDE window of the session's solution, not only its folder ([#45](https://github.com/workedbeforepush/agenttiles/issues/45)) ([8e52b56](https://github.com/workedbeforepush/agenttiles/commit/8e52b56eacf74ff258cc0fcb163ed1aa2fe50f2e))
+
 ## [0.7.0](https://github.com/workedbeforepush/agenttiles/compare/v0.6.1...v0.7.0) (2026-10-22)
 
 
