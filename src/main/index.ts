@@ -40,7 +40,7 @@ import { Notifier } from './notifier';
 import { Attention } from './attention';
 import { attachSession, launchSession, recentSessions, stopSession } from './launcher';
 import { focusSession, initPlatform, registerAppIdentity, setLinuxAutostart, setTerminalTarget } from './platform';
-import { APP_ID, APP_NAME, persistentIcons } from './appId';
+import { APP_ICON_PNG, APP_ID, APP_NAME, persistentIcons } from './appId';
 import { SessionStore } from './store';
 import { Updater, releaseUrl, shouldAnnounce } from './updater';
 import { AppTray } from './tray';
@@ -80,6 +80,8 @@ async function start(): Promise<void> {
   await initPlatform();
   const icons = persistentIcons(userData);
   registerAppIdentity(APP_ID, APP_NAME, icons.png);
+  // macOS: the Dock shows the icon of the Electron.app bundle and ignores the window icon.
+  app.dock?.setIcon(APP_ICON_PNG);
 
   const daily = new DailyStats(userData);
   const usage = new UsageLog(userData);
