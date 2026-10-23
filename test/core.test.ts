@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { firstJsonObject, isRegistryFileName, parseRegistryEntry } from '../src/core/registry';
+import { firstJsonObject, isAgentSdkEntry, isRegistryFileName, parseRegistryEntry } from '../src/core/registry';
 import { applyTranscriptLine, emptyTranscriptInfo } from '../src/core/transcript';
 import { LineSplitter, permissionOutput } from '../src/core/protocol';
 import { projectName, projectSlug } from '../src/core/paths';
@@ -45,6 +45,15 @@ describe('registry', () => {
     const bg = text.replace('"kind":"interactive"', '"kind":"bg","jobId":"4490bb57"');
     expect(parseRegistryEntry(bg)).toMatchObject({ kind: 'bg', jobId: '4490bb57' });
     expect(parseRegistryEntry(text)?.jobId).toBeNull();
+  });
+
+  it('tells Agent SDK sessions from terminal sessions', () => {
+    const entry = (json: string) => parseRegistryEntry(json)!;
+    expect(isAgentSdkEntry(entry(text))).toBe(false);
+    expect(isAgentSdkEntry(entry(text.replace('"entrypoint":"cli"', '"entrypoint":"sdk-cli"')))).toBe(true);
+    expect(isAgentSdkEntry(entry(text.replace('"entrypoint":"cli"', '"entrypoint":"sdk-ts"')))).toBe(true);
+    expect(isAgentSdkEntry(entry(text.replace('"entrypoint":"cli"', '"entrypoint":"claude-vscode"')))).toBe(false);
+    expect(isAgentSdkEntry(entry(text.replace('"entrypoint":"cli",', '')))).toBe(false);
   });
 
   it('rejects entries without pid, sessionId or cwd', () => {

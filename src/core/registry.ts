@@ -16,6 +16,8 @@ export interface RegistryEntry {
   kind: string;
   /** Background sessions only: the short id `claude attach` / `claude stop` take. */
   jobId: string | null;
+  /** How the session was started: `cli` in a terminal, `sdk-*` when a program runs Claude Code through the Agent SDK. */
+  entrypoint: string | null;
   version: string | null;
 }
 
@@ -23,6 +25,14 @@ const REGISTRY_FILE = /^(\d+)\.json$/;
 
 export function isRegistryFileName(fileName: string): boolean {
   return REGISTRY_FILE.test(fileName);
+}
+
+/**
+ * Sessions a program drives through the Agent SDK (plugin helpers such as claude-mem's observer) have no terminal
+ * and nobody to answer them, so they get no tile.
+ */
+export function isAgentSdkEntry(entry: RegistryEntry): boolean {
+  return entry.entrypoint?.startsWith('sdk-') ?? false;
 }
 
 /**
@@ -88,6 +98,7 @@ export function parseRegistryEntry(text: string): RegistryEntry | null {
     procStart: str(raw['procStart']),
     kind: str(raw['kind']) ?? 'interactive',
     jobId: str(raw['jobId']),
+    entrypoint: str(raw['entrypoint']),
     version: str(raw['version']),
   };
 }
