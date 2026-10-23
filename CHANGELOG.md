@@ -3,6 +3,13 @@
 All notable changes to AgentTiles. Versions follow [Semantic Versioning](https://semver.org/); entries are written
 by release-please from the pull request titles (conventional commits).
 
+## [0.7.2](https://github.com/workedbeforepush/agenttiles/compare/v0.7.1...v0.7.2) (2026-10-23)
+
+
+### Bug Fixes
+
+* show the AgentTiles icon in the macOS Dock ([#47](https://github.com/workedbeforepush/agenttiles/issues/47)) ([1234323](https://github.com/workedbeforepush/agenttiles/commit/12343238e0cf188a253c2909a97bd2d72d67e55a))
+
 ## [0.7.1](https://github.com/workedbeforepush/agenttiles/compare/v0.7.0...v0.7.1) (2026-10-23)
 
 
