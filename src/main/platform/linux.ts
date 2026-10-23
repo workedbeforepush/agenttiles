@@ -5,6 +5,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { pickWindow, projectNames } from './project';
 import { ancestors, onPath, processTable, run, selectTerminalPane, sessionTerminal } from './unix';
 
 export type LinuxFocus = 'focused' | 'notFound' | 'noX11' | 'noXdotool';
@@ -55,10 +56,11 @@ async function windowsOf(pid: number): Promise<string[]> {
 /**
  * Shows the session's pane (tmux, WezTerm, kitty) and brings the window hosting it to the front: the nearest ancestor
  * process (terminal, terminal server or IDE) that owns a window; for a session in tmux, the terminal of the tmux
- * client used last. Among several windows of that process the one whose title contains the session title wins.
- * Wayland compositors do not let other apps raise windows, so raising needs X11 (or XWayland) and xdotool.
+ * client used last. Among several windows of that process the one whose title names the session or its project wins
+ * (see `pickWindow`). Wayland compositors do not let other apps raise windows, so raising needs X11 (or XWayland) and
+ * xdotool.
  */
-export async function focusSession(pid: number, titles: string[]): Promise<LinuxFocus> {
+export async function focusSession(pid: number, titles: string[], cwd: string): Promise<LinuxFocus> {
   const shown = await sessionTerminal(pid);
   const chain = ancestors(shown.pid, await processTable());
   await selectTerminalPane(shown, chain).catch(() => undefined);
@@ -67,15 +69,9 @@ export async function focusSession(pid: number, titles: string[]): Promise<Linux
   for (const ancestor of chain.slice(1)) {
     const windows = await windowsOf(ancestor.pid);
     if (windows.length === 0) continue;
-    let target = windows[0]!;
-    for (const id of windows) {
-      const name = await run('xdotool', ['getwindowname', id]).catch(() => '');
-      if (titles.some((t) => name.includes(t))) {
-        target = id;
-        break;
-      }
-    }
-    await run('xdotool', ['windowactivate', target]);
+    const names = await Promise.all(windows.map((id) => run('xdotool', ['getwindowname', id]).catch(() => '')));
+    const index = pickWindow(names.map((name) => name.trim()), titles, projectNames(cwd));
+    await run('xdotool', ['windowactivate', windows[index ?? 0]!]);
     return 'focused';
   }
   return 'notFound';

@@ -2,6 +2,7 @@
 // xdotool); tmux, WezTerm and kitty panes on macOS and Linux.
 import type { TerminalTarget } from '../../core/types';
 import { log } from '../log';
+import { pickWindow, projectNames } from './project';
 
 type WindowsModule = typeof import('./windows');
 type MacModule = typeof import('./mac');
@@ -121,37 +122,14 @@ export function matchableTitles(titles: string[]): string[] {
 }
 
 /**
- * Of several windows of one app (IDE project windows: "Shop.Api – Program.cs", "app - Visual Studio Code"), the one
- * whose title names the session's folder or, failing that, its nearest parent folder; null when none does. The name
- * has to stand alone in the title, so folder "app" does not pick window "app.web".
- */
-export function windowForFolder(titles: string[], cwd: string): number | null {
-  const folders = cwd.split(/[\\/]/).filter((part) => part.length > 0 && !/^[A-Za-z]:$/.test(part)).reverse();
-  for (const folder of folders) {
-    const index = titles.findIndex((title) => namesFolder(title, folder));
-    if (index >= 0) return index;
-  }
-  return null;
-}
-
-/** True when `folder` occurs in `title` with a space, bracket or the title's edge on both sides. */
-function namesFolder(title: string, folder: string): boolean {
-  const edge = (char: string | undefined): boolean => char === undefined || /[\s()[\]]/.test(char);
-  for (let at = title.indexOf(folder); at >= 0; at = title.indexOf(folder, at + 1)) {
-    if (edge(title[at - 1]) && edge(title[at + folder.length])) return true;
-  }
-  return false;
-}
-
-/**
  * Toggles the window hosting a Claude Code session: brings it to front (selecting the Windows Terminal tab or
  * WezTerm pane, or the IDE window of the session's folder), or minimizes it when AgentTiles showed exactly this
  * session last and the window is still frontmost on its monitor.
  */
 export async function focusSession(sessionId: string, pid: number, cwd: string, sessionTitles: string[]): Promise<FocusResult> {
   const titles = matchableTitles(sessionTitles);
-  if (mac) return mac.focusSession(pid);
-  if (linux) return linux.focusSession(pid, titles);
+  if (mac) return mac.focusSession(pid, titles, cwd);
+  if (linux) return linux.focusSession(pid, titles, cwd);
   if (!win) return 'unsupported';
   const host = win.findHostWindows(pid);
   if (!host) return 'notFound';
@@ -180,7 +158,7 @@ export async function focusSession(sessionId: string, pid: number, cwd: string, 
       });
       target = selected ?? first;
     } else if (host.hwnds.length > 1) {
-      const index = windowForFolder(host.hwnds.map((h) => win?.windowTitle(h) ?? ''), cwd);
+      const index = pickWindow(host.hwnds.map((h) => win?.windowTitle(h) ?? ''), titles, projectNames(cwd));
       target = index === null ? first : (host.hwnds[index] ?? first);
     }
     win.bringToFront(target);

@@ -106,6 +106,9 @@ Facts learned the hard way; check before building on the opposite.
   `switch-client -t %<pane>` changes session, window and pane at once.
 - IDE terminals cannot be picked from outside: VS Code's CLI and `vscode://` URLs have no terminal target, the
   JetBrains built-in server has no terminal endpoint, and JetBrains windows show no UI Automation tree (Swing).
-  A Rider session runs under `rider64.exe` → shell; its project window is titled "<project> – <file>".
+  A Rider session runs under `rider64.exe` → shell; one process owns every project window, titled "<solution> – <file>"
+  (the solution name, which can differ from the folder name: folder `darkorbit-2009`, window "DarkOrbit – Program.cs").
+  On macOS, System Events lists and raises another app's windows (`AXRaise`) only with Accessibility access for
+  AgentTiles; without it osascript fails and the app is activated as a whole (unverified on a real Mac).
 - Pull requests and tags created with `GITHUB_TOKEN` start no workflows; release-please uses the
   `RELEASE_PLEASE_TOKEN` secret so CI runs on its release PR.
