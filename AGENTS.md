@@ -92,6 +92,9 @@ Facts learned the hard way; check before building on the opposite.
   `claude attach` / `claude stop`); their process stays alive while idle. More state lives in
   `~/.claude/jobs/<jobId>/state.json`.
 - The registry `cwd` is the session's project folder; `CwdChanged` only reports `cd` inside the Bash tool.
+- `wt.exe new-tab` hands the caller's environment to the new tab, also into an existing window (verified on Windows
+  Terminal 1.24 by reading the tab process's environment): a `NO_COLOR=1` in AgentTiles' environment turned off the
+  colours of the Claude session it started.
 - Windows remembers the first icon path per app id: icons Windows keeps (relaunch, toast) come from copies in the
   userData folder. Taskbar overlay icons are rescaled by Windows and stay soft; the crisp native badge needs package
   identity (MSIX).
