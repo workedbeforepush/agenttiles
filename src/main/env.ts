@@ -19,12 +19,22 @@ const SESSION_MARKERS = new Set([
 ]);
 
 /**
- * The environment without the markers of a Claude session AgentTiles may itself run in. The user's own configuration
- * (CLAUDE_CONFIG_DIR, CLAUDE_CODE_USE_BEDROCK, CLAUDE_CODE_OAUTH_TOKEN, ...) stays, so started sessions use the same
- * profile, provider and account as the user's terminal.
+ * Colour switches of the process that started AgentTiles (a tool's shell sets NO_COLOR for its own output). A session
+ * that inherits them draws without colours in a terminal that has them.
+ */
+const COLOUR_SWITCHES = new Set(['NO_COLOR', 'FORCE_COLOR']);
+
+/**
+ * The environment without the markers of a Claude session AgentTiles may itself run in, its colour switches and
+ * Electron's own variables. The user's own configuration (CLAUDE_CONFIG_DIR, CLAUDE_CODE_USE_BEDROCK,
+ * CLAUDE_CODE_OAUTH_TOKEN, ...) stays, so started sessions use the same profile, provider and account as the user's
+ * terminal.
  */
 export function cleanEnv(env: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
   return Object.fromEntries(
-    Object.entries(env).filter(([key]) => !SESSION_MARKERS.has(key.toUpperCase()) && !/^OPENCODE/i.test(key)),
+    Object.entries(env).filter(([key]) => {
+      const name = key.toUpperCase();
+      return !SESSION_MARKERS.has(name) && !COLOUR_SWITCHES.has(name) && !/^(OPENCODE|ELECTRON_)/.test(name);
+    }),
   );
 }

@@ -16,6 +16,17 @@ describe('environment for started sessions', () => {
     expect(env).toEqual({ PATH: 'C:\\bin' });
   });
 
+  it('drops colour switches and Electron variables, so sessions draw in colour', () => {
+    const env = cleanEnv({
+      NO_COLOR: '1',
+      Force_Color: '0',
+      ELECTRON_RUN_AS_NODE: '1',
+      ELECTRON_RENDERER_URL: 'http://localhost:5173',
+      TERM: 'xterm-256color',
+    });
+    expect(env).toEqual({ TERM: 'xterm-256color' });
+  });
+
   it("keeps the user's Claude configuration", () => {
     const user = {
       CLAUDE_CONFIG_DIR: 'D:\\claude-profile',
