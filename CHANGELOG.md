@@ -3,6 +3,13 @@
 All notable changes to AgentTiles. Versions follow [Semantic Versioning](https://semver.org/); entries are written
 by release-please from the pull request titles (conventional commits).
 
+## [0.7.3](https://github.com/workedbeforepush/agenttiles/compare/v0.7.2...v0.7.3) (2026-10-23)
+
+
+### Bug Fixes
+
+* start sessions in colour when AgentTiles inherited NO_COLOR ([#49](https://github.com/workedbeforepush/agenttiles/issues/49)) ([1f80538](https://github.com/workedbeforepush/agenttiles/commit/1f8053800aa786451b369552cc91f5f3453ca8c2))
+
 ## [0.7.2](https://github.com/workedbeforepush/agenttiles/compare/v0.7.1...v0.7.2) (2026-10-23)
 
 
