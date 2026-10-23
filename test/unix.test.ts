@@ -4,7 +4,7 @@ import { delimiter, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { SHELL_PATH_COMMAND, ancestors, mergePath, onPath, parseLstart, parsePs, parseShellPath } from '../src/main/platform/unix';
 import { wtArgs } from '../src/main/platform/wt';
-import { appBundleOf, appleString, hostApp, openScript, selectTabScript, shellQuote, terminalOf } from '../src/main/platform/mac';
+import { appBundleOf, appleString, hostApp, hostProcess, openScript, parseWindowTitles, raiseWindowScript, selectTabScript, shellQuote, terminalOf, windowTitlesScript } from '../src/main/platform/mac';
 import { LINUX_TERMINALS, desktopEntry, execValue } from '../src/main/platform/linux';
 import { findWezTermPane, parseWezTermPanes, siblingExecutable, titleMatches, weztermActivateArgs } from '../src/main/platform/wezterm';
 import { TMUX_CLIENTS_ARGS, TMUX_PANES_ARGS, parseTmuxClients, parseTmuxPanes, pickTmuxClient, tmuxSwitchArgs } from '../src/main/platform/tmux';
@@ -87,6 +87,7 @@ describe('macOS', () => {
     expect(hostApp(ancestors(900, table))).toBe('/Applications/iTerm.app');
     // A session in VS Code's terminal runs under a helper bundle inside the app: the outer app is the host.
     expect(hostApp(ancestors(980, table))).toBe('/Applications/Visual Studio Code.app');
+    expect(hostProcess(ancestors(980, table))?.comm).toContain('/Applications/Visual Studio Code.app/');
     expect(terminalOf('/Applications/iTerm.app')).toBe('iTerm2');
     expect(terminalOf('/System/Applications/Utilities/Terminal.app')).toBe('Terminal');
     expect(terminalOf('/Applications/Visual Studio Code.app')).toBeNull();
@@ -95,6 +96,15 @@ describe('macOS', () => {
   it('quotes for AppleScript and the shell', () => {
     expect(appleString('say "hi" \\ there')).toBe('"say \\"hi\\" \\\\ there"');
     expect(shellQuote("it's")).toBe("'it'\\''s'");
+  });
+
+  it('lists and raises the windows of an app process through System Events', () => {
+    expect(windowTitlesScript(4711)).toContain('first application process whose unix id is 4711');
+    expect(windowTitlesScript(4711)).toContain('if n is missing value then set n to ""');
+    expect(parseWindowTitles('Shop – Program.cs\n\nnotes.md — tools\n\n')).toEqual(['Shop – Program.cs', '', 'notes.md — tools']);
+    expect(parseWindowTitles('\n')).toEqual([]);
+    expect(raiseWindowScript(4711, 'Shop "A" – x')).toContain('first window of p whose name is "Shop \\"A\\" – x"');
+    expect(raiseWindowScript(4711, 'Shop')).toContain('set frontmost of p to true');
   });
 
   it('builds the tab selection and open scripts', () => {
