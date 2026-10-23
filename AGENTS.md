@@ -95,6 +95,8 @@ Facts learned the hard way; check before building on the opposite.
 - Windows remembers the first icon path per app id: icons Windows keeps (relaunch, toast) come from copies in the
   userData folder. Taskbar overlay icons are rescaled by Windows and stay soft; the crisp native badge needs package
   identity (MSIX).
+- macOS: an unpackaged app shows the Electron.app icon in the Dock and app switcher; the `BrowserWindow` icon is
+  ignored there, `app.dock.setIcon` replaces it while the app runs (unverified on a real Mac).
 - Electron hands Windows only the 1x tray and overlay image: paint them at the display's real pixel size.
 - The `electron` package downloads its binary on the first `require` and prints that on stdout; the `agenttiles`
   command requires it only when it starts the app. `--uninstall` is plain Node: Electron can crash on Windows when it
