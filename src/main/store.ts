@@ -25,7 +25,7 @@ import type {
   TileView,
 } from '../core/types';
 import { toolDiff } from '../core/diff';
-import { isRegistryFileName, parseRegistryEntry, type RegistryEntry } from '../core/registry';
+import { isAgentSdkEntry, isRegistryFileName, parseRegistryEntry, type RegistryEntry } from '../core/registry';
 import { applyTranscriptLine, emptyTranscriptInfo } from '../core/transcript';
 import { projectName, sessionsDir, transcriptPath } from '../core/paths';
 import {
@@ -201,7 +201,7 @@ export class SessionStore {
       }
       if (entry) this.lastGood.set(name, entry);
       else entry = this.lastGood.get(name) ?? null;
-      if (!entry || !SHOWN_KINDS.has(entry.kind) || this.ownPids.has(entry.pid)) continue;
+      if (!entry || !SHOWN_KINDS.has(entry.kind) || isAgentSdkEntry(entry) || this.ownPids.has(entry.pid)) continue;
       if (!isAlive(entry.pid, entry.procStart)) continue;
       entries.push(entry);
     }

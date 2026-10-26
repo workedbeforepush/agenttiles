@@ -34,6 +34,7 @@ function registry(status: string, at: number): RegistryEntry {
     kind: 'interactive',
     version: null,
     jobId: null,
+    entrypoint: 'cli',
   };
 }
 

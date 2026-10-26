@@ -131,6 +131,7 @@ flowchart LR
 
 - **Discovery:** Claude Code keeps a small registry file per running session. AgentTiles watches that folder, so it
   finds every interactive and background session immediately, including ones that were running before AgentTiles started.
+  Sessions that a program runs through the Agent SDK, such as a plugin's helper agent, get no tile.
 - **Details:** it tails each session's transcript for the title, last prompt, reply and tool calls.
 - **Live events and decisions:** optional command hooks forward events over a local named pipe, protected by a
   random token. For permission requests the hook waits for your decision in AgentTiles; Claude Code's own dialog

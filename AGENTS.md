@@ -91,6 +91,9 @@ Facts learned the hard way; check before building on the opposite.
 - Background sessions (`claude --bg`) have a normal registry file with `"kind": "bg"` and a `jobId` (the id for
   `claude attach` / `claude stop`); their process stays alive while idle. More state lives in
   `~/.claude/jobs/<jobId>/state.json`.
+- The registry `entrypoint` is `cli` for a terminal session and `sdk-cli` for one a program starts through the Agent
+  SDK (verified on Claude Code 2.1.309 with claude-mem's observer, whose cwd is `~/.claude-mem/observer-sessions`);
+  other `sdk-*` values (`sdk-ts`, `sdk-py`) are unverified.
 - The registry `cwd` is the session's project folder; `CwdChanged` only reports `cd` inside the Bash tool.
 - `wt.exe new-tab` hands the caller's environment to the new tab, also into an existing window (verified on Windows
   Terminal 1.24 by reading the tab process's environment): a `NO_COLOR=1` in AgentTiles' environment turned off the
