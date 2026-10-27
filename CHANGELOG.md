@@ -3,6 +3,13 @@
 All notable changes to AgentTiles. Versions follow [Semantic Versioning](https://semver.org/); entries are written
 by release-please from the pull request titles (conventional commits).
 
+## [0.7.4](https://github.com/workedbeforepush/agenttiles/compare/v0.7.3...v0.7.4) (2026-10-26)
+
+
+### Bug Fixes
+
+* hide Agent SDK helper sessions such as claude-mem's observer ([#51](https://github.com/workedbeforepush/agenttiles/issues/51)) ([6d2798a](https://github.com/workedbeforepush/agenttiles/commit/6d2798a91f2567c2eec79f643fcf3a16c154fc7b))
+
 ## [0.7.3](https://github.com/workedbeforepush/agenttiles/compare/v0.7.2...v0.7.3) (2026-10-23)
 
 
