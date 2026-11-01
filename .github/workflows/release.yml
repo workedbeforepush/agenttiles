@@ -74,7 +74,7 @@ jobs:
       contents: read
       id-token: write # npm trusted publishing (OIDC) and provenance; no npm token in the repo
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.release-please.outputs.tag_name }}
       - uses: actions/setup-node@v7
