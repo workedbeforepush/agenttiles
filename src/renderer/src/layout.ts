@@ -39,6 +39,25 @@ export function groupTiles<T extends { tile: { cwd: string; project: string } }>
   return [...blocks.values()];
 }
 
+/**
+ * The session ids after dropping `source` on `target`: it takes the target's place, in either direction. Works on the
+ * screen order, as grouping shows the store's order differently, and needs every tile, also those a filter hides.
+ */
+export function droppedOrder<T extends { sessionId: string; cwd: string; project: string }>(
+  tiles: T[],
+  grouped: boolean,
+  source: string,
+  target: string,
+): string[] {
+  const screen = groupTiles(tiles.map((tile) => ({ tile })), grouped)
+    .flatMap((block) => block.items)
+    .map(({ tile }) => tile.sessionId);
+  const movingRight = screen.indexOf(source) < screen.indexOf(target);
+  const ids = screen.filter((id) => id !== source);
+  ids.splice(ids.indexOf(target) + (movingRight ? 1 : 0), 0, source);
+  return ids;
+}
+
 export interface PageGeometry {
   columns: number;
   /** Available height, row height and the gap between rows, in px. */
