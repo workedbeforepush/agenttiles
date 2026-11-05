@@ -25,7 +25,7 @@
   import WithCode from './components/WithCode.svelte';
   import { setLocale, t } from './i18n.svelte';
   import { snapshot as demoSnapshot } from '../../core/demo';
-  import { filterEnded, filterTiles, groupTiles, paginate } from './layout';
+  import { droppedOrder, filterEnded, filterTiles, groupTiles, paginate } from './layout';
   import type { StatusFilter } from '../../core/counters';
   import { NEEDS_YOU, paintTaskbarBadge, paintTrayIcon } from './format';
   import { SOUND_PRIORITY, playCue } from './sounds';
@@ -318,9 +318,7 @@
     const source = dragId;
     dragId = null;
     if (!source || source === targetId) return;
-    const ids = snapshot.tiles.map((t) => t.sessionId).filter((id) => id !== source);
-    ids.splice(ids.indexOf(targetId), 0, source);
-    void window.agenttiles.setOrder(ids);
+    void window.agenttiles.setOrder(droppedOrder(snapshot.tiles, grouped, source, targetId));
   }
 
   onMount(() => {

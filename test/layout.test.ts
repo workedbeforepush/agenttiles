@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { filterEnded, filterTiles, groupTiles, paginate } from '../src/renderer/src/layout';
+import { droppedOrder, filterEnded, filterTiles, groupTiles, paginate } from '../src/renderer/src/layout';
 import type { EndedTileView, TileView } from '../src/core/types';
 
 const tile = (id: string, state: TileView['state'], cwd = 'C:\\p\\a'): TileView =>
@@ -35,6 +35,34 @@ describe('ended tiles', () => {
       ['b', ['2']],
       ['c', ['y']],
     ]);
+  });
+});
+
+describe('dropping a tile on another', () => {
+  const plain = [tile('a', 'idle'), tile('b', 'idle'), tile('c', 'idle')];
+
+  it.each([
+    ['its right neighbour', 'a', 'b', ['b', 'a', 'c']],
+    ['the last tile', 'a', 'c', ['b', 'c', 'a']],
+    ['its left neighbour', 'b', 'a', ['b', 'a', 'c']],
+    ['the first tile', 'c', 'a', ['c', 'a', 'b']],
+  ])('takes the place of %s', (_name, source, target, order) => {
+    expect(droppedOrder(plain, false, source, target)).toEqual(order);
+  });
+
+  // The store's order a1 b1 a2 reads a1 a2 b1 on screen: a move inside a project must not swap the projects.
+  const mixed = [tile('a1', 'idle', 'C:\\p\\a'), tile('b1', 'idle', 'C:\\p\\b'), tile('a2', 'idle', 'C:\\p\\a')];
+
+  it('keeps the store order when not grouped', () => {
+    expect(droppedOrder(mixed, false, 'a1', 'a2')).toEqual(['b1', 'a2', 'a1']);
+  });
+
+  it('moves right by screen order when grouped', () => {
+    expect(droppedOrder(mixed, true, 'a1', 'a2')).toEqual(['a2', 'a1', 'b1']);
+  });
+
+  it('moves left by screen order when grouped', () => {
+    expect(droppedOrder(mixed, true, 'a2', 'a1')).toEqual(['a2', 'a1', 'b1']);
   });
 });
 
