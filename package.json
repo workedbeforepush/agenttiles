@@ -51,7 +51,7 @@
     "prepack": "npm run build"
   },
   "dependencies": {
-    "electron": "45.0.0",
+    "electron": "45.2.3",
     "koffi": "3.3.3",
     "smol-toml": "1.9.1"
   },
